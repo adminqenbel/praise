@@ -1,0 +1,38 @@
+# Render blueprint for the Praise API (https://api.praise.qenbel.site).
+# Secrets marked `sync: false` are entered once in the Render dashboard and never committed.
+# Migrations are a release step run from a developer machine (`flask --app app db upgrade` with DATABASE_URL set to
+# Supabase's session pooler), not on boot.
+services:
+  - type: web
+    name: praise-api
+    runtime: python
+    plan: free                      # sleeps after ~15 idle minutes; see docs/DEPLOY.md
+    region: singapore               # keep next to the Supabase project
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # One process so the in-memory rate limiter and AI budget stay shared; threads serve requests in parallel.
+    startCommand: gunicorn --workers 1 --threads 8 --timeout 60 --bind 0.0.0.0:$PORT "app:create_app()"
+    healthCheckPath: /health
+    domains:
+      - api.praise.qenbel.site
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: PRAISE_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL           # Supabase transaction pooler (:6543) ending in ?sslmode=require
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: AI_DAILY_BUDGET
+        value: "500"
+      - key: DASHBOARD_ORIGIN
+        value: https://app.praise.qenbel.site
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: TRUSTED_PROXY_HOPS     # Render's load balancer; verify after the first deploy (docs/DEPLOY.md)
+        value: "1"

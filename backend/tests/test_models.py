@@ -61,6 +61,19 @@ def test_site_domain_unique(app):
         db.session.commit()
 
 
+def test_every_table_gets_row_level_security():
+    """Supabase serves the public schema over its REST API: each table must have RLS switched on by a migration."""
+    versions = pathlib.Path(__file__).resolve().parents[1] / "migrations" / "versions"
+    sources = "\n".join(p.read_text(encoding="utf-8") for p in versions.glob("*.py"))
+    from importlib.util import module_from_spec, spec_from_file_location
+    spec = spec_from_file_location("rls", versions / "e5f7a9b1c3d5_row_level_security.py")
+    rls = module_from_spec(spec)
+    spec.loader.exec_module(rls)
+    missing = [t for t in db.metadata.tables
+               if t not in rls.TABLES and f'"{t}" ENABLE ROW LEVEL SECURITY' not in sources]
+    assert missing == [], f"add ENABLE ROW LEVEL SECURITY for {missing} in their migration"
+
+
 def test_duplicate_policy_rule_rejected(app):
     u = User(email="q@x.com", password_hash="h")
     db.session.add(u)

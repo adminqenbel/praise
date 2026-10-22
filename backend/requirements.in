@@ -1,0 +1,11 @@
+# Direct runtime dependencies. requirements.txt is the pinned set actually installed: after changing this file,
+# install it into a clean virtualenv and write `pip freeze` to requirements.txt.
+flask>=3.0
+flask-cors>=4.0
+flask-migrate>=4.0
+sqlalchemy>=2.0
+flask-sqlalchemy>=3.1
+psycopg2-binary>=2.9
+google-genai>=1.0
+python-dotenv>=1.0
+gunicorn>=23.0

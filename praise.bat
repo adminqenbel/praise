@@ -46,7 +46,7 @@ rem ---- 2. python environment ----------------------------------------------
 if not exist "%VENV%\Scripts\python.exe" (
   echo Creating Python environment ^(first run, a minute or two^)...
   python -m venv "%VENV%" || ( echo   [!] Python 3.11+ not found on PATH. & goto :fail )
-  "%VENV%\Scripts\python.exe" -m pip install -q -r "%BACKEND%\requirements.txt" || goto :fail
+  "%VENV%\Scripts\python.exe" -m pip install -q -r "%BACKEND%\requirements-dev.txt" || goto :fail
 )
 
 if not exist "%BACKEND%\.env" (

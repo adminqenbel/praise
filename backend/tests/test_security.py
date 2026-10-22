@@ -114,6 +114,63 @@ def test_parent_cannot_use_another_parents_device_endpoints(limited_app):
     assert b.post(f"/api/devices/{dev['device_id']}/revoke", headers={"X-CSRF-Token": csrf_b}).status_code == 404
 
 
+class ProductionConfig(TestConfig):
+    PRAISE_ENV = "production"
+    TESTING = False
+    SECRET_KEY = "k" * 48
+    SQLALCHEMY_DATABASE_URI = "postgresql://praise:pw@db.example.com:6543/postgres?sslmode=require"
+    SESSION_COOKIE_SECURE = True
+    DASHBOARD_ORIGIN = "https://app.example.com"
+    AI_MODE = ""
+
+
+@pytest.mark.parametrize("change, fragment", [
+    ({"SECRET_KEY": "dev-only-change-me"}, "SECRET_KEY"),
+    ({"SECRET_KEY": "short"}, "SECRET_KEY"),
+    ({"SQLALCHEMY_DATABASE_URI": "postgresql+psycopg2://postgres:postgres@localhost:5432/praise"}, "DATABASE_URL"),
+    ({"SQLALCHEMY_DATABASE_URI": "postgresql://praise:pw@db.example.com:6543/postgres"}, "sslmode"),
+    ({"AI_MODE": "mock"}, "AI_MODE"),
+    ({"SESSION_COOKIE_SECURE": False}, "SESSION_COOKIE_SECURE"),
+    ({"DASHBOARD_ORIGIN": "http://app.example.com"}, "DASHBOARD_ORIGIN"),
+])
+def test_production_refuses_to_start_on_unsafe_settings(change, fragment):
+    bad = type("Bad", (ProductionConfig,), change)
+    with pytest.raises(RuntimeError, match=fragment):
+        create_app(bad)
+
+
+def test_production_starts_with_safe_settings():
+    class Safe(ProductionConfig):
+        SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://praise:pw@db.example.com:6543/postgres?sslmode=require"
+    assert create_app(Safe).config["PRAISE_ENV"] == "production"
+
+
+def test_hosted_database_urls_use_psycopg2():
+    from config import database_url
+    assert database_url("postgresql://u:p@h:6543/postgres").startswith("postgresql+psycopg2://u:p@h")
+    assert database_url("postgres://u:p@h/db") == "postgresql+psycopg2://u:p@h/db"
+    assert database_url("sqlite://") == "sqlite://"
+
+
+def test_rate_limits_see_the_client_behind_one_trusted_proxy():
+    class Proxied(LimitedConfig):
+        TRUSTED_PROXY_HOPS = 1
+    limiter.reset()
+    app = create_app(Proxied)
+    with app.app_context():
+        db.create_all()
+        c = app.test_client()
+        # the proxy appends the address it saw; anything earlier in the header is the client's own claim
+        hdr = lambda ip: {"X-Forwarded-For": f"6.6.6.6, {ip}"}
+        codes = [c.post("/api/devices/pair", json={"code": "ABCD2345"}, headers=hdr("1.1.1.1")).status_code
+                 for _ in range(11)]
+        assert codes[-1] == 429
+        assert c.post("/api/devices/pair", json={"code": "ABCD2345"}, headers=hdr("2.2.2.2")).status_code == 400
+        db.session.remove()
+        db.drop_all()
+    limiter.reset()
+
+
 def test_injection_shaped_inputs_are_inert(limited_app):
     c = limited_app.test_client()
     csrf = c.post("/api/auth/register", json={"email": "i@x.com", "password": "password123"}).get_json()["csrf"]

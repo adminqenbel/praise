@@ -9,6 +9,8 @@ Read `HANDOFF.md` first (what exists, what differs from local, what is known to 
 - Never commit or print secrets. `backend/.env` is not in this copy and must stay out of git; `backend/.env.example` is the template.
 - Shared browser code lives in `common/` and is copied into `extension/` and `dashboard/js/` by `python scripts/sync_common.py`. Edit `common/`, then run it. `python scripts/sync_common.py --check` must be clean before a commit.
 - Tracker rule sets (`extension/rules/*.json`) are generated: edit `common/protections.js`, then `node scripts/build_rules.js`.
+- PostgreSQL only (MongoDB was removed). Every new table enables row level security in its own migration; `tests/test_models.py` enforces it. Deployment is described in `docs/DEPLOY.md`.
+- `backend/requirements.txt` is pinned: change `requirements.in`, reinstall into a clean virtualenv, write `pip freeze` back. Tests use `requirements-dev.txt`.
 - The policy engine (`backend/policy/`) is pure and decides every ALLOW/BLOCK. The AI only classifies; never let a model output decide directly.
 - Match the surrounding code's comment density and naming. Keep the three visual identities separate (neutral landing, family, adult Shield).
 

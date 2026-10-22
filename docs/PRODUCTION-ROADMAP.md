@@ -4,12 +4,12 @@ Ordered by dependency. Tick items as they land. "Why" notes point at the code th
 
 ## A. Foundation (do first; everything else assumes it)
 
-- [ ] **Fail closed on bad config.** Refuse to start when `SECRET_KEY` is the dev value, when `AI_MODE=mock` outside tests, or when `DATABASE_URL` still points at `postgres:postgres@localhost` (`backend/app.py`, `backend/config.py`). Add a `PRAISE_ENV=production` switch.
-- [ ] **Configurable origins.** One `API_ORIGIN` for the dashboard (replace the hard-coded `http://localhost:5000` in `dashboard/js/api.js`) and generate the CSP `connect-src` from it at build or serve time instead of editing every HTML page. Same for the extension's `DEFAULT_BACKEND` (`extension/background.js:18`), and remove the free-text server field from the production popup.
-- [ ] **WSGI + container.** gunicorn (or waitress) with a health check on `/health`, a `Dockerfile` for the API, and compose or equivalent for local parity with PostgreSQL. Run migrations as a release step, not on boot.
-- [ ] **Serve the dashboard properly.** Static hosting or reverse proxy with real cache headers, TLS, and the security headers the CSP expects. Retire `dashboard/serve.py` for production.
-- [ ] **Vendor Chart.js** and drop `https://cdnjs.cloudflare.com` from `script-src`.
-- [ ] **One site for cookies.** Decide the domain layout (dashboard and API under one registrable domain or one proxy), set `SESSION_COOKIE_SECURE=1`, and update `DASHBOARD_ORIGIN`.
+- [x] **Fail closed on bad config.** Done: `PRAISE_ENV=production` refuses unsafe settings (`config.production_problems`). Refuse to start when `SECRET_KEY` is the dev value, when `AI_MODE=mock` outside tests, or when `DATABASE_URL` still points at `postgres:postgres@localhost` (`backend/app.py`, `backend/config.py`). Add a `PRAISE_ENV=production` switch.
+- [x] **Configurable origins.** Done for the beta: dashboard picks local or `api.praise.qenbel.site` by host; the extension's server is fixed in store builds. One `API_ORIGIN` for the dashboard (replace the hard-coded `http://localhost:5000` in `dashboard/js/api.js`) and generate the CSP `connect-src` from it at build or serve time instead of editing every HTML page. Same for the extension's `DEFAULT_BACKEND` (`extension/background.js:18`), and remove the free-text server field from the production popup.
+- [x] **WSGI + container.** Beta: gunicorn on Render's Python runtime (`render.yaml`), no container yet. gunicorn (or waitress) with a health check on `/health`, a `Dockerfile` for the API, and compose or equivalent for local parity with PostgreSQL. Run migrations as a release step, not on boot.
+- [x] **Serve the dashboard properly.** Vercel with `dashboard/vercel.json` headers. Static hosting or reverse proxy with real cache headers, TLS, and the security headers the CSP expects. Retire `dashboard/serve.py` for production.
+- [x] **Vendor Chart.js** (4.4.1 from the npm tarball, checksum verified, `dashboard/vendor/`) and drop `https://cdnjs.cloudflare.com` from `script-src`.
+- [x] **One site for cookies.** `app.praise.qenbel.site` + `api.praise.qenbel.site`. Decide the domain layout (dashboard and API under one registrable domain or one proxy), set `SESSION_COOKIE_SECURE=1`, and update `DASHBOARD_ORIGIN`.
 - [ ] **Shared state for limits.** Replace the in-process rate limiter and AI budget (`backend/services/ratelimit.py`, `services/ai_service.py`) with Redis or database counters so several workers behave as one.
 - [ ] **Clean first-run path.** Documented bootstrap: `db upgrade`, `seed-sites`, `create-admin`; schedule `purge-events` daily. No demo seeds.
 
@@ -20,7 +20,7 @@ Ordered by dependency. Tick items as they land. "Why" notes point at the code th
 - [ ] Secret management: keys in the platform's secret store, rotation procedure, new Gemini key, per-environment `SECRET_KEY`.
 - [ ] Child-data compliance: parental-consent flow, privacy policy, data-export and deletion endpoints, retention review (events are kept 90 days), data-processing terms with the model provider. Take legal advice for the target regions.
 - [ ] Audit log for admin actions (review decisions already write `site_reviews`; extend to account and policy changes).
-- [ ] Dependency pinning with a lock file and automated vulnerability scanning (`requirements.txt` currently uses open lower bounds).
+- [ ] Dependency pinning with a lock file (done: `requirements.txt` is pinned) and automated vulnerability scanning (not yet) (`requirements.txt` currently uses open lower bounds).
 
 ## C. Reliability and operations
 

@@ -3,8 +3,9 @@ import os
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from config import Config
+from config import DEV_SECRET_KEY, Config, production_problems
 from database.postgres import db, migrate
 
 
@@ -14,10 +15,22 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    security_log = logging.getLogger("praise.security")
+    # In production an unsafe setting stops the start instead of serving families with it.
+    if app.config.get("PRAISE_ENV") == "production":
+        problems = production_problems(app.config)
+        if problems:
+            raise RuntimeError("Refusing to start in production: " + "; ".join(problems))
+        if not app.config.get("GEMINI_API_KEY"):
+            security_log.warning("GEMINI_API_KEY is empty: unknown sites will get each rule set's default")
     # Sessions are signed with SECRET_KEY, so running with the built-in dev value is unsafe outside tests: warn loudly.
-    if app.config["SECRET_KEY"] == "dev-only-change-me" and not app.config.get("TESTING"):
-        logging.getLogger("praise.security").warning(
-            "SECRET_KEY is the built-in dev value: set a random SECRET_KEY in backend/.env")
+    elif app.config["SECRET_KEY"] == DEV_SECRET_KEY and not app.config.get("TESTING"):
+        security_log.warning("SECRET_KEY is the built-in dev value: set a random SECRET_KEY in backend/.env")
+
+    # Behind a reverse proxy, take the client address and scheme from the headers it sets (and only that many hops).
+    hops = app.config.get("TRUSTED_PROXY_HOPS", 0)
+    if hops:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops)
 
     # Safety headers on every response: no content sniffing, no referrer leaks, no framing (clickjacking).
     @app.after_request

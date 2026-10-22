@@ -45,7 +45,8 @@ limiter = RateLimiter()
 
 
 def client_ip() -> str:
-    # remote_addr only: X-Forwarded-For is client-controlled unless a trusted proxy sets it.
+    # remote_addr only: X-Forwarded-For is client-controlled. Behind a proxy, ProxyFix (TRUSTED_PROXY_HOPS)
+    # has already replaced remote_addr with the address the trusted proxy saw.
     return request.remote_addr or "unknown"
 
 
