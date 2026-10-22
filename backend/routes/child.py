@@ -131,7 +131,7 @@ def check():
             except (AIUnavailable, InvalidAIResponse):
                 ai_state = "unavailable"  # keep the unknown-site default decision
 
-    # Every check is logged (child, device, URL, decision) in MongoDB for the parent's activity view.
+    # Every check is logged (child, device, URL, decision) in the events table for the parent's activity view.
     event_service.record("browser", child.id, g.device.id, {
         "url": url[:2000], "domain": domain, "decision": decision.to_dict(), "ai": ai_state})
 

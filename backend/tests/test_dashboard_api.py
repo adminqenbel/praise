@@ -8,16 +8,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from ai.classifier import Classifier
 from database.models import Site, User
 from database.postgres import db
-from services import ai_service, event_service
+from services import ai_service
 from services.auth_service import hash_password
 from tests.test_ai import FakeBackend
 from tests.test_models import TestConfig, app  # noqa: F401  (fixture)
 
 
 @pytest.fixture(autouse=True)
-def reset_ai(monkeypatch):
-    sink = []
-    monkeypatch.setattr(event_service, "insert", lambda c, d: sink.append((c, d)) or True)
+def reset_ai():
     yield
     ai_service.set_classifier(None)
 
@@ -205,25 +203,9 @@ def test_parent_dispute_flags_site_for_review(app):
     assert c.post("/api/sites/never-seen.com/dispute", json={}, headers=h).status_code == 404
 
 
-# ---- events / stats (real MongoDB test database; skipped when unreachable) -------------------
+# ---- events / stats ---------------------------------------------------------------------------
 
-@pytest.fixture()
-def mongo(app):
-    from database import mongo as m
-    try:
-        m._client.admin.command("ping")
-    except Exception:
-        pytest.skip("MongoDB not reachable")
-    db_ = m.get_mongo()
-    for coll in ("browser_events", "cookie_events", "download_events", "security_events"):
-        db_[coll].delete_many({})
-    yield db_
-    for coll in ("browser_events", "cookie_events", "download_events", "security_events"):
-        db_[coll].delete_many({})
-
-
-def test_stats_and_events_scoped_to_own_children(app, mongo, monkeypatch):
-    monkeypatch.undo()  # use the real event_service.insert for this test
+def test_stats_and_events_scoped_to_own_children(app):
     ai_service.set_classifier(Classifier(FakeBackend()))
     c, h = register(app, "p@x.com")
     cid, ext = pair_child(app, c, h)
@@ -255,11 +237,23 @@ def test_stats_and_events_scoped_to_own_children(app, mongo, monkeypatch):
     assert other.get("/api/stats").get_json()["totals"]["checks"] == 1   # their own data only
 
 
-def test_event_timestamps_carry_timezone(app, mongo, monkeypatch):
-    monkeypatch.undo()
+def test_event_timestamps_carry_timezone(app):
     c, h = register(app, "p@x.com")
     cid, ext = pair_child(app, c, h)
     app.test_client().post("/api/ext/events", headers=ext,
                            json={"events": [{"kind": "security", "data": {"type": "tamper"}}]})
     ts = c.get("/api/events?kind=security").get_json()["events"][0]["timestamp"]
     assert ts.endswith("+00:00")
+
+
+def test_events_page_backwards_with_before_cursor(app):
+    c, h = register(app, "p@x.com")
+    cid, ext = pair_child(app, c, h)
+    for i in range(3):
+        app.test_client().post("/api/ext/events", headers=ext,
+                               json={"events": [{"kind": "security", "data": {"type": f"t{i}"}}]})
+    first = c.get("/api/events?kind=security&limit=2").get_json()["events"]
+    assert [e["type"] for e in first] == ["t2", "t1"]
+    from urllib.parse import quote
+    rest = c.get(f"/api/events?kind=security&before={quote(first[-1]['timestamp'])}").get_json()["events"]
+    assert [e["type"] for e in rest] == ["t0"]

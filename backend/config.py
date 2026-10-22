@@ -8,14 +8,11 @@ load_dotenv()
 # Every setting comes from the environment with a safe local default, so the app starts on a fresh machine.
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
-    # PostgreSQL: users, children, policies, sites, rules, reviews.
+    # PostgreSQL: users, children, policies, sites, rules, reviews, events (kept 90 days) and AI evidence.
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/praise"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # MongoDB: browsing events and full AI analysis, kept for 90 days.
-    MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-    MONGO_DB = os.environ.get("MONGO_DB", "praise")
     # Classifier settings: key, model and a per-day call cap that stops runaway cost.
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
     AI_MODE = os.environ.get("AI_MODE", "")  # "mock" = offline keyword classifier (dev only)

@@ -9,7 +9,7 @@ rem    praise.bat demo         also create demo data (parent@demo.test / Mia)
 rem    praise.bat stop         stop the backend and dashboard
 rem    praise.bat nobrowser    do not open the browser (can combine: praise.bat mock nobrowser)
 rem
-rem  From a terminal run it as .praise.bat. Needs: PostgreSQL and MongoDB running, Python 3.11+, backend\.env (created from
+rem  From a terminal run it as .praise.bat. Needs: PostgreSQL running, Python 3.11+, backend\.env (created from
 rem  .env.example on first run). The Chrome extension is loaded by hand:
 rem  chrome://extensions -> Developer mode -> Load unpacked -> this folder\extension
 rem ============================================================================
@@ -34,17 +34,11 @@ if defined DO_STOP goto :stop
 echo.
 echo === Praise ===
 
-rem ---- 1. databases -------------------------------------------------------
+rem ---- 1. database ---------------------------------------------------------
 call :check_port 5432 PostgreSQL PG_OK
-call :check_port 27017 MongoDB MONGO_OK
 if not "!PG_OK!"=="1" (
   echo   [!] PostgreSQL is not listening on 5432. Start its Windows service, e.g.:
   echo       net start postgresql-x64-18      ^(run as Administrator; name may differ^)
-  goto :fail
-)
-if not "!MONGO_OK!"=="1" (
-  echo   [!] MongoDB is not listening on 27017. Start its Windows service:
-  echo       net start MongoDB                ^(run as Administrator^)
   goto :fail
 )
 
@@ -71,7 +65,6 @@ set "FLASK_APP=app.py"
 echo Applying database migrations...
 "%VENV%\Scripts\flask.exe" db upgrade 2>nul
 if errorlevel 1 ( echo   [!] Migration failed. Check DATABASE_URL in backend\.env and that the "praise" database exists. & popd & goto :fail )
-"%VENV%\Scripts\flask.exe" init-mongo >nul
 "%VENV%\Scripts\flask.exe" seed-sites
 popd
 
@@ -125,7 +118,7 @@ for %%P in (%API_PORT% %DASH_PORT%) do (
     taskkill /PID %%X /F >nul 2>&1 && echo   stopped process on port %%P
   )
 )
-echo Done. ^(PostgreSQL and MongoDB are left running.^)
+echo Done. ^(PostgreSQL is left running.^)
 goto :eof
 
 rem ---- helpers --------------------------------------------------------------

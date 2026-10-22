@@ -1,10 +1,9 @@
-"""Glue: classify an unknown domain, persist summary (Postgres) + full analysis (Mongo)."""
-from datetime import datetime, timezone
+"""Glue: classify an unknown domain, persist the summary (sites) and the full analysis (ai_analyses)."""
+from sqlalchemy.exc import SQLAlchemyError
 
 from ai.classifier import AIUnavailable, Classifier, DailyBudget, InvalidAIResponse
 from ai.gemini import build_backend
-from database.models import Site
-from database.mongo import get_mongo
+from database.models import AIAnalysis, Site
 from database.postgres import db
 from services import site_service
 
@@ -62,28 +61,23 @@ def threat_context(domain: str, signals: dict | None = None) -> dict:
     Reasons come ONLY from our own deterministic checks. The AI's free-text evidence is derived from the
     page's content, which an attacker controls: a scam page could make the model "explain" itself with
     a phone number or instructions, and that text would then appear inside a trusted warning. The
-    evidence stays in MongoDB for administrators; it is never sent to the person's browser.
+    evidence stays in ai_analyses for administrators; it is never sent to the person's browser.
     """
     from ai.heuristics import phishing_signals
     heur = phishing_signals(domain, signals)
     return {"evidence": heur["reasons"][:4], "suggest": heur.get("official")}
 
 
-# Keep the full AI answer in MongoDB for administrators. Best effort: the decision itself is already in PostgreSQL.
+# Keep the full AI answer for administrators. Best effort: the decision itself is already committed on the site row.
 def _log_analysis(result) -> None:
     try:
-        get_mongo()["ai_analysis"].insert_one({
-            "domain": result.domain,
-            "model": result.model,
-            "risk_score": result.risk_score,
-            "confidence": result.confidence,
-            "categories": result.categories,
-            "evidence": result.evidence,
-            "heuristics": result.heuristics,
-            "timestamp": datetime.now(timezone.utc),
-        })
-    except Exception:  # evidence log is best-effort; Postgres already holds the decision data
-        pass
+        db.session.add(AIAnalysis(
+            domain=result.domain, model=str(result.model)[:64], risk_score=result.risk_score,
+            confidence=result.confidence, categories=result.categories, evidence=result.evidence,
+            heuristics=result.heuristics))
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
 
 __all__ = ["classify_and_store", "get_classifier", "set_classifier",

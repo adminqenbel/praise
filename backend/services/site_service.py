@@ -107,7 +107,7 @@ def record_ai_result(site: Site, category: str, risk: int, confidence: float,
                      scores: dict, classified_by: int | None = None) -> bool:
     """Store an AI classification. Never overwrites an admin-verified site.
 
-    Returns True if stored. Callers keep the full AI response in Mongo.
+    Returns True if stored. Callers keep the full AI response in ai_analyses.
     """
     if site.status == "ADMIN_VERIFIED":
         return False

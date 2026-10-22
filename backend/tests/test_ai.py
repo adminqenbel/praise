@@ -141,7 +141,7 @@ def test_concurrent_same_domain_calls_provider_once():
     assert backend.calls == 1 and results[1] is None
 
 
-# ---- service integration (Postgres-side only; Mongo log is best effort) ----
+# ---- service integration (the ai_analyses log is best effort) ----
 
 def test_classify_and_store_persists_and_second_call_skips_ai(app):
     backend = FakeBackend()

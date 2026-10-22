@@ -10,7 +10,7 @@ from ai.classifier import Classifier
 from app import create_app
 from database.models import Site, SiteReview, User
 from database.postgres import db
-from services import ai_service, event_service
+from services import ai_service
 from services.ratelimit import limiter
 from tests.test_ai import FakeBackend
 from tests.test_dashboard_api import make_admin, pair_child, register
@@ -21,8 +21,7 @@ BENIGN = json.dumps({"risk_score": 5, "confidence": 0.95,
 
 
 @pytest.fixture(autouse=True)
-def isolate(monkeypatch):
-    monkeypatch.setattr(event_service, "insert", lambda c, d: True)
+def isolate():
     yield
     ai_service.set_classifier(None)
 

@@ -77,7 +77,7 @@ def events():
     if bad:
         return bad
     kind = request.args.get("kind", "browser")
-    if kind not in stats_service.KIND_COLLECTIONS:
+    if kind not in stats_service.KINDS:
         return err("unknown kind", 400)
     limit = request.args.get("limit", "50")
     before = None

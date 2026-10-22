@@ -6,14 +6,13 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from services import ai_service, event_service
+from services import ai_service
 from tests.test_adult import adult
 from tests.test_models import app  # noqa: F401  (fixture)
 
 
 @pytest.fixture(autouse=True)
-def isolate(monkeypatch):
-    monkeypatch.setattr(event_service, "insert", lambda c, d: True)
+def isolate():
     yield
     ai_service.set_classifier(None)
 

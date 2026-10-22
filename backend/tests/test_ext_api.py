@@ -7,18 +7,16 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from ai.classifier import Classifier
-from database.models import Child, Policy, PolicyRule, Site
+from database.models import Child, Event, Policy, PolicyRule, Site
 from database.postgres import db
-from services import ai_service, event_service, site_service
+from services import ai_service, site_service
 from tests.test_ai import FakeBackend
 from tests.test_models import app  # noqa: F401  (fixture)
 
 
 @pytest.fixture(autouse=True)
-def no_real_mongo(monkeypatch):
-    sink = []
-    monkeypatch.setattr(event_service, "insert", lambda coll, doc: sink.append((coll, doc)) or True)
-    yield sink
+def reset_ai():
+    yield
     ai_service.set_classifier(None)
 
 
@@ -52,7 +50,7 @@ def test_bad_url_rejected(app):
     assert ext.post("/api/ext/check", json={"url": "chrome://settings"}, headers=h).status_code == 400
 
 
-def test_unknown_gambling_site_blocked_stored_and_second_call_skips_ai(app, no_real_mongo):
+def test_unknown_gambling_site_blocked_stored_and_second_call_skips_ai(app):
     backend = gambling_backend()
     ai_service.set_classifier(Classifier(backend))
     _, h, _ = paired(app)  # no policy assigned => child_safe
@@ -67,7 +65,7 @@ def test_unknown_gambling_site_blocked_stored_and_second_call_skips_ai(app, no_r
     assert r2.get_json()["action"] == "BLOCK" and r2.get_json()["ai"] == "not_needed"
     assert backend.calls == 1  # no second Gemini call
     assert Site.query.one().status == "AI_CLASSIFIED"
-    assert any(c == "browser_events" for c, _ in no_real_mongo)
+    assert Event.query.filter_by(kind="browser").count() == 2
 
 
 def test_ai_unavailable_falls_back_to_unknown_default(app):
@@ -120,16 +118,30 @@ def test_policy_sync_reflects_policy(app):
     assert snap["category_actions"]["gambling"] == "BLOCK" and snap["unknown_action"] == "REVIEW"
 
 
-def test_events_batch_validated_and_clipped(app, no_real_mongo):
-    _, h, _ = paired(app)
+def test_events_batch_validated_and_clipped(app):
+    _, h, cid = paired(app)
     evs = [{"kind": "download", "data": {"filename": "a.exe", "$where": "x", "n.o": 1,
-                                         "big": "z" * 9999}},
+                                         "big": "z" * 9999, "nul": "a\x00b", "child_id": 999}},
            {"kind": "nonsense", "data": {}}, "junk"]
     r = app.test_client().post("/api/ext/events", json={"events": evs}, headers=h).get_json()
     assert r == {"accepted": 1, "rejected": 2}
-    doc = no_real_mongo[-1][1]
+    ev = Event.query.filter_by(kind="download").one()
+    doc = ev.data
     assert "$where" not in doc and "n.o" not in doc and len(doc["big"]) == 2000
-    assert doc["child_id"] and doc["device_id"]
+    assert doc["nul"] == "ab"                                   # PostgreSQL JSONB refuses NUL
+    assert ev.child_id == cid and ev.device_id                  # who comes from the token, not the payload
+
+
+def test_purge_removes_only_events_past_retention(app):
+    from datetime import datetime, timedelta, timezone
+    from services import event_service
+    _, h, cid = paired(app)
+    now = datetime.now(timezone.utc)
+    db.session.add_all([Event(kind="security", child_id=cid, data={"type": "old"}, timestamp=now - timedelta(days=91)),
+                        Event(kind="security", child_id=cid, data={"type": "new"}, timestamp=now - timedelta(days=89))])
+    db.session.commit()
+    assert event_service.purge_older_than() == 1
+    assert [e.data["type"] for e in Event.query.all()] == ["new"]
 
 
 def test_unknown_site_without_signals_asks_extension_for_them(app):

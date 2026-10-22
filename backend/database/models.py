@@ -1,11 +1,12 @@
 """PostgreSQL system-of-record models.
 
 Global site intelligence (sites, site_categories, site_reputation, site_reviews) holds
-NO child-scoped data. Anything tied to a child/device lives in MongoDB events.
+NO child-scoped data. Anything tied to a child/device lives in the events table.
 """
 from datetime import datetime, timezone
 
 from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 
 from .postgres import db
 
@@ -13,6 +14,12 @@ from .postgres import db
 # All timestamps are stored timezone-aware in UTC.
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+# Free-form JSON: JSONB on PostgreSQL (indexable), plain JSON on SQLite (tests).
+JSONDoc = db.JSON().with_variant(JSONB(), "postgresql")
+# High-volume tables get 64-bit ids; SQLite only auto-increments a plain INTEGER key.
+BigId = db.BigInteger().with_variant(db.Integer(), "sqlite")
 
 
 # Lifecycle of a website's classification, from never seen to verified by an admin.
@@ -227,3 +234,33 @@ class SiteReview(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
 
     site = db.relationship("Site", back_populates="reviews")
+
+
+# Something one browser reported, or one check decided: the parent's activity view. `data` keeps the shape the extension
+# sent (clipped); the server adds who and when. Deleting a profile deletes its events. Kept 90 days (`flask purge-events`).
+class Event(db.Model):
+    __tablename__ = "events"
+    id = db.Column(BigId, primary_key=True)
+    kind = db.Column(db.String(16), nullable=False)  # browser | cookie | download | security
+    child_id = db.Column(db.Integer, db.ForeignKey("children.id", ondelete="CASCADE"), nullable=False)
+    device_id = db.Column(db.Integer, db.ForeignKey("devices.id", ondelete="SET NULL"))
+    timestamp = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False, index=True)
+    data = db.Column(JSONDoc, nullable=False, default=dict)
+    __table_args__ = (
+        db.Index("ix_events_child_kind_time", "child_id", "kind", "timestamp"),
+        CheckConstraint("kind in ('browser','cookie','download','security')", name="ck_event_kind"),
+    )
+
+
+# The model's full answer for one classification, kept for administrators. Global data: nothing about a person.
+class AIAnalysis(db.Model):
+    __tablename__ = "ai_analyses"
+    id = db.Column(BigId, primary_key=True)
+    domain = db.Column(db.String(255), nullable=False, index=True)
+    model = db.Column(db.String(64))
+    risk_score = db.Column(db.Integer)
+    confidence = db.Column(db.Float)
+    categories = db.Column(JSONDoc)
+    evidence = db.Column(JSONDoc)
+    heuristics = db.Column(JSONDoc)
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)

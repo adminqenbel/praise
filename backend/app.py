@@ -6,7 +6,6 @@ from flask_cors import CORS
 
 from config import Config
 from database.postgres import db, migrate
-from database.mongo import init_mongo
 
 
 # Application factory: builds the Flask app, wires the databases and registers every route group.
@@ -32,10 +31,9 @@ def create_app(config_class=Config):
 
     # Only the dashboard's origin may call the API from a browser, and only it may send the session cookie.
     CORS(app, supports_credentials=True, origins=[app.config["DASHBOARD_ORIGIN"]])
-    # PostgreSQL (system of record) and MongoDB (events and AI evidence) are attached here.
+    # PostgreSQL holds everything: accounts, rules, site intelligence, events and AI evidence.
     db.init_app(app)
     migrate.init_app(app, db)
-    init_mongo(app)
 
     from database import models  # noqa: F401  (register tables for migrations)
 
@@ -79,12 +77,11 @@ def create_app(config_class=Config):
         added, present = seed_sites()
         print(f"seeded {added} sites ({present} left as they were)")
 
-    @app.cli.command("init-mongo")
-    def init_mongo_cmd():
-        """Create MongoDB indexes (idempotent)."""
-        from database.mongo import ensure_indexes
-        ensure_indexes()
-        print("mongo indexes ready")
+    @app.cli.command("purge-events")
+    def purge_events_cmd():
+        """Delete events older than the retention period (90 days). Safe to run daily."""
+        from services.event_service import RETENTION_DAYS, purge_older_than
+        print(f"removed {purge_older_than()} event(s) older than {RETENTION_DAYS} days")
 
     # Liveness probe used by the launcher and the tests.
     @app.get("/health")

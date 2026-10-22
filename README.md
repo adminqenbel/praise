@@ -1,19 +1,18 @@
 # Praise: AI-assisted parental web protection
 
 A Chrome extension on the child's browser enforces rules. A separate dashboard lets a parent set
-those rules and review activity. A Flask backend, backed by PostgreSQL and MongoDB, makes the
+those rules and review activity. A Flask backend, backed by PostgreSQL, makes the
 decisions. Gemini classifies sites nobody has seen before, and a deterministic policy engine, not
 the AI, makes the final ALLOW or BLOCK call.
 
 ```
- Parent / admin dashboard (HTML, CSS, JS, Chart.js)  --REST/JSON-->  Flask backend  --> PostgreSQL (system of record)
- Child browser extension (Manifest V3)               --REST/JSON-->                 --> MongoDB (events, AI evidence)
-                                                                                    --> Gemini (classifier only)
+ Parent / admin dashboard (HTML, CSS, JS, Chart.js)  --REST/JSON-->  Flask backend  --> PostgreSQL (everything, incl. events and AI evidence)
+ Child browser extension (Manifest V3)               --REST/JSON-->                 --> Gemini (classifier only)
 ```
 
 ## Quick start (Windows)
 
-Needs PostgreSQL, MongoDB and Python 3.11+. Create an empty database called `praise` first.
+Needs PostgreSQL and Python 3.11+. Create an empty database called `praise` first.
 
 ```
 .\praise.bat            start backend (5000) and dashboard (5500), open the browser
@@ -24,7 +23,7 @@ Needs PostgreSQL, MongoDB and Python 3.11+. Create an empty database called `pra
 
 The first run creates `backend\.env`. Set `DATABASE_URL` (your PostgreSQL password) and
 `GEMINI_API_KEY`, then run it again. It also sets up the Python environment, applies migrations,
-creates MongoDB indexes and loads the well-known-sites list.
+and loads the well-known-sites list.
 
 Load the extension: `chrome://extensions` -> Developer mode -> Load unpacked -> `extension\`. There is **one** extension for
 everyone: it stays neutral until you enter a pairing code, and the code decides what it becomes (see below).

@@ -8,7 +8,7 @@ An AI-assisted web-protection platform.
 
 | Part | Where | Tech |
 |---|---|---|
-| Backend API | `backend/` | Flask 3, SQLAlchemy 2 + Flask-Migrate (PostgreSQL), PyMongo (MongoDB), Gemini via `google-genai` |
+| Backend API | `backend/` | Flask 3, SQLAlchemy 2 + Flask-Migrate (PostgreSQL; MongoDB was removed on the production track, events and AI evidence are now the `events` and `ai_analyses` tables), Gemini via `google-genai` |
 | Policy engine | `backend/policy/` | Pure Python, no I/O. Makes every ALLOW/BLOCK decision |
 | Dashboard | `dashboard/` | Static HTML/CSS/vanilla JS, Chart.js from a CDN. Landing hub, family dashboard, adult "Shield" dashboard, admin review queue |
 | Extension | `extension/` | One Chrome Manifest V3 extension. Neutral until a one-time pairing code is accepted; the code decides family mode (buddy Dori) or adult Praise Shield mode (buddy Ringo) |
@@ -46,9 +46,9 @@ These are the concrete places the code assumes a single Windows machine. Each is
 6. **Dev server.** The README starts the backend with `flask run`. Production needs a WSGI server (gunicorn or waitress) behind a TLS-terminating proxy. No `Dockerfile`, process manager config, or CI exists yet.
 7. **Secrets and defaults.** `SECRET_KEY` falls back to `dev-only-change-me` (the app logs a warning, but still starts). `DATABASE_URL` falls back to `postgres:postgres@localhost`. Production should refuse to start on those defaults. `backend/.env.example` ships a placeholder `SECRET_KEY`; generate a real one per environment.
 8. **Chart.js from a CDN** (`cdnjs.cloudflare.com`, allowed in the CSP). Vendor it locally for production so the CSP can drop the third-party origin and the dashboard works without it.
-9. **Demo data.** `seed_demo.py` and `seed_adult.py` create `@demo.test` accounts with the password `demo-password-123`. Production must never run them. `flask --app app purge-demo` removes those accounts. The local database also holds test/demo rows; do not migrate it to production, start from an empty database with `flask db upgrade`, `flask init-mongo`, `flask seed-sites`, `flask create-admin`.
+9. **Demo data.** `seed_demo.py` and `seed_adult.py` create `@demo.test` accounts with the password `demo-password-123`. Production must never run them. `flask --app app purge-demo` removes those accounts. The local database also holds test/demo rows; do not migrate it to production, start from an empty database with `flask db upgrade`, `flask seed-sites`, `flask create-admin`.
 10. **Gemini.** The key in the local `.env` has been used in development; regenerate a new one for production and keep it out of source control. The model name (`GEMINI_MODEL`, default `gemini-3.8-flash`) is a setting because models are retired over time. `AI_MODE=mock` must be unset in production.
-11. **Data retention.** MongoDB events are kept 90 days (TTL index). Cookie values are never collected. Confirm this against the privacy policy you publish; a children's-data deployment likely needs a documented legal basis, parental-consent flow and deletion/export endpoints (none exist yet).
+11. **Data retention.** Events are kept 90 days: run `flask --app app purge-events` daily (or schedule the same delete with pg_cron). Cookie values are never collected. Confirm this against the privacy policy you publish; a children's-data deployment likely needs a documented legal basis, parental-consent flow and deletion/export endpoints (none exist yet).
 
 ## 5. Environment variables (see `backend/config.py`)
 
@@ -56,7 +56,6 @@ These are the concrete places the code assumes a single Windows machine. Each is
 |---|---|---|
 | `SECRET_KEY` | Signs sessions | Required, random, at least 32 bytes |
 | `DATABASE_URL` | PostgreSQL (SQLAlchemy URL) | Managed instance, TLS, least-privilege role |
-| `MONGO_URL`, `MONGO_DB` | MongoDB events and AI evidence | Auth + TLS |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_DAILY_BUDGET` | Classifier | Budget is per process today |
 | `AI_MODE` | `mock` = offline classifier | Must be empty |
 | `DASHBOARD_ORIGIN` | The only CORS origin | The real dashboard URL |
@@ -69,7 +68,7 @@ Backend (from `backend/`, with a virtualenv and `pip install -r requirements.txt
 
 ```
 flask --app app db upgrade        # schema
-flask --app app init-mongo        # indexes (idempotent)
+flask --app app purge-events      # delete events past 90 days (run daily)
 flask --app app seed-sites        # well-known sites (idempotent)
 flask --app app create-admin      # first admin (interactive)
 flask --app app purge-demo        # remove @demo.test accounts
@@ -82,7 +81,7 @@ Front end: `python scripts/sync_common.py` (copy shared code), `node scripts/bui
 
 1. Create a git repository for this folder (new repo or a branch of the original; your choice) with the existing `.gitignore`, and make the first commit before changing anything so every production change is a diff.
 2. Do the "Foundation" group in `docs/PRODUCTION-ROADMAP.md`: config hardening, WSGI + container, configurable origins.
-3. Stand up a staging environment (PostgreSQL, MongoDB, API, static dashboard) and run `scripts/e2e_pair.js` against it with a non-mock classifier.
+3. Stand up a staging environment (PostgreSQL, API, static dashboard) and run `scripts/e2e_pair.js` against it with a non-mock classifier.
 4. Then security review, observability, store submission and the managed-install path for families.
 
 ## 8. Where to look

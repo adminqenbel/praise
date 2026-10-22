@@ -6,7 +6,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from ai import companion_llm as cl
-from tests.test_ext_api import paired, no_real_mongo  # noqa: F401  (fixtures/helpers)
+from tests.test_ext_api import paired, reset_ai  # noqa: F401  (fixtures/helpers)
 from tests.test_models import app  # noqa: F401
 
 

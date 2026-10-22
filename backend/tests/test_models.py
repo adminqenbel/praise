@@ -19,7 +19,6 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get("TEST_DATABASE_URL", "sqlite://")
     TESTING = True
     RATELIMIT_ENABLED = False
-    MONGO_DB = "praise_test"
 
 
 @pytest.fixture()

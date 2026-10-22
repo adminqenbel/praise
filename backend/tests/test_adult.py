@@ -14,15 +14,14 @@ from policy.categories import Action
 from policy.decision import Level, SiteInfo
 from policy.engine import decide
 from policy.presets import SHIELD_PRESETS, preset, preset_settings
-from services import ai_service, event_service
+from services import ai_service
 from services.settings_service import SettingsError, validate_settings
 from tests.test_ai import FakeBackend
 from tests.test_models import app  # noqa: F401  (fixture)
 
 
 @pytest.fixture(autouse=True)
-def isolate(monkeypatch):
-    monkeypatch.setattr(event_service, "insert", lambda c, d: True)
+def isolate():
     yield
     ai_service.set_classifier(None)
 
@@ -225,30 +224,17 @@ def test_family_accounts_do_not_get_heuristic_warnings(app):
 
 # ---- dashboard numbers for the adult home ----------------------------------------------------------------
 
-def test_adult_stats_count_warnings_per_day_and_by_type(app, monkeypatch):
-    from database import mongo as m
-    try:
-        m._client.admin.command("ping")
-    except Exception:
-        pytest.skip("MongoDB not reachable")
-    monkeypatch.undo()                                           # use the real event_service.insert
-    db_ = m.get_mongo()
-    for coll in ("browser_events", "cookie_events", "download_events", "security_events"):
-        db_[coll].delete_many({})
-    try:
-        c, h = adult(app)
-        ext = pair_self(app, c, h)
-        events = [{"kind": "security", "data": {"type": t, "domain": "x.example.com"}} for t in
-                  ("warning_shown", "warning_shown", "warning_overridden", "sensitive_breached", "sensitive_sent_anyway")]
-        events.append({"kind": "cookie", "data": {"type": "cookie", "action": "BLOCKED", "rule": "tracker", "purpose": "Advertising / tracking"}})
-        app.test_client().post("/api/ext/events", json={"events": events}, headers=ext)
-        s = c.get("/api/stats").get_json()
-        assert s["security_by_type"] == {"warning_shown": 2, "warning_overridden": 1, "sensitive_breached": 1, "sensitive_sent_anyway": 1}
-        assert len(s["security_per_day"]) == 1 and s["security_per_day"][0]["count"] == 5
-        assert s["totals"]["trackers_blocked"] == 1
-    finally:
-        for coll in ("browser_events", "cookie_events", "download_events", "security_events"):
-            db_[coll].delete_many({})
+def test_adult_stats_count_warnings_per_day_and_by_type(app):
+    c, h = adult(app)
+    ext = pair_self(app, c, h)
+    events = [{"kind": "security", "data": {"type": t, "domain": "x.example.com"}} for t in
+              ("warning_shown", "warning_shown", "warning_overridden", "sensitive_breached", "sensitive_sent_anyway")]
+    events.append({"kind": "cookie", "data": {"type": "cookie", "action": "BLOCKED", "rule": "tracker", "purpose": "Advertising / tracking"}})
+    app.test_client().post("/api/ext/events", json={"events": events}, headers=ext)
+    s = c.get("/api/stats").get_json()
+    assert s["security_by_type"] == {"warning_shown": 2, "warning_overridden": 1, "sensitive_breached": 1, "sensitive_sent_anyway": 1}
+    assert len(s["security_per_day"]) == 1 and s["security_per_day"][0]["count"] == 5
+    assert s["totals"]["trackers_blocked"] == 1
 
 
 # ---- review fix: the AI's own words must never reach a warning ----------------------------------------------
