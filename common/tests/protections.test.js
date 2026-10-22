@@ -68,6 +68,12 @@ test("escape and tamper URLs", () => {
   assert.ok(P.isTamperUrl("chrome://flags/#x"));
   assert.ok(!P.isTamperUrl("chrome://newtab/"));
   assert.ok(!P.isTamperUrl("https://example.com/chrome://extensions"));
+  for (const u of ["http://203.0.113.9/", "https://192.168.1.1:8443/admin", "http://[2001:db8::1]/", "http://3405803785/", "http://0xcb.0.113.9/"]) {
+    assert.ok(P.isIpUrl(u), u);
+  }
+  for (const u of ["https://example.com/", "http://127.0.0.1:5000/", "http://127.0.0.2:8000/", "http://[::1]/", "chrome://extensions", "not a url"]) {
+    assert.ok(!P.isIpUrl(u), u);
+  }
 });
 
 test("registrableDomain", () => {

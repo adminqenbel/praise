@@ -54,6 +54,7 @@
     browser_installer: "Other browsers can't be installed here, but I'm right here to help.",
     external_browser: "That link wanted to open another browser. Let's stay here together.",
     tamper: "That page is for grown-ups, because it changes how I work.",
+    ip_address: "That address was only numbers, so I couldn't check it. Try the site's name instead.",
   };
 
   // Dori's lines, grouped by what happened. Each group has several variants so she doesn't repeat herself.

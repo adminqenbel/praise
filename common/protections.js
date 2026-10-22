@@ -128,6 +128,18 @@
     return TAMPER_PAGES.test(String(url || ""));
   }
 
+  // A web address that names a raw IP instead of a site (http://203.0.113.9/, http://[2001:db8::1]/). There is no
+  // name to judge, so a child's browser would otherwise let it through unchecked. The URL parser already turns
+  // tricks like http://0x7f.1/ or http://3405803785/ into dotted form. This computer (127.x, ::1) is left alone.
+  function isIpUrl(url) {
+    let u;
+    try { u = new URL(String(url || "")); } catch (e) { return false; }
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+    const host = u.hostname.replace(/^\[|\]$/g, "");
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return !host.startsWith("127.");
+    return host.includes(":") && host !== "::1";
+  }
+
   // ---- cookies ---------------------------------------------------------------------------
   const TWO_LEVEL = new Set(["co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au",
     "edu.au", "co.in", "ac.in", "gov.in", "net.in", "org.in", "co.jp", "com.br", "co.nz", "co.za",
@@ -273,7 +285,7 @@
 
   const api = { DEFAULTS, withDefaults, FINGERPRINT_DOMAINS, TRACKING_PARAMS, trackerBlockDomains, buildRulesets,
     paramStripRules, PARAM_CHUNK, trackingParamPattern, stripTrackingParams, fileExtension, evaluateDownload, isBrowserInstallerUrl,
-    isEscapeUrl, isTamperUrl, registrableDomain, classifyCookie, cookieAction };
+    isEscapeUrl, isTamperUrl, isIpUrl, registrableDomain, classifyCookie, cookieAction };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.PraiseRules = api;
 })(typeof self !== "undefined" ? self : this);

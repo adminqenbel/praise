@@ -100,6 +100,7 @@ async function render(keepVoice) {
   $("connect").disabled = false;
   $("connect").textContent = "Connect this browser";
   $("code").value = "";
+  $("serverBox").hidden = !st.devBuild;        // only an unpacked developer copy can use another server
   $("server").value = $("server").value || st.backendUrl;
   if (st.revoked) {
     $("revoked").hidden = false;

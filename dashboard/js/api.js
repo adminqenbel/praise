@@ -2,11 +2,10 @@
 
 // Thin fetch wrapper: session cookie + CSRF header, JSON in/out, readable errors.
 const Api = (() => {
-  // Where the backend lives. It can be overridden with localStorage 'praiseApi'; the default is the local server.
-  const base = (() => {
-    try { return localStorage.getItem("praiseApi") || "http://localhost:5000"; }
-    catch (e) { return "http://localhost:5000"; }
-  })();
+  // Where the backend lives: the local dev server when the dashboard itself is served locally, otherwise the
+  // production API. Each page's CSP connect-src lists exactly these two.
+  const LOCAL_HOSTS = ["localhost", "127.0.0.1"];
+  const base = LOCAL_HOSTS.includes(location.hostname) ? "http://localhost:5000" : "https://api.praise.qenbel.site";
   // The CSRF token comes back from login/me and is sent on every change (POST, PUT, PATCH, DELETE).
   let csrf = null;
 
@@ -25,7 +24,7 @@ const Api = (() => {
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (e) {
-      throw new ApiError(0, "Can't reach the server. Check that the backend is running.");
+      throw new ApiError(0, "Can't reach the server. Check your connection and try again in a minute.");
     }
     let data = null;
     try { data = await res.json(); } catch (e) { /* empty body */ }

@@ -15,7 +15,10 @@ const R = self.PraiseRules;
 const PW = self.PraisePasswords;
 
 // Timings and limits. A normal check gives up after 8 s; a first-time check may wait up to 40 s for the AI. Decisions are cached (up to 2000) and the policy is re-synced every 5 minutes.
-const DEFAULT_BACKEND = "http://localhost:5000";
+const DEFAULT_BACKEND = "https://api.praise.qenbel.site";
+// A copy installed from the Chrome Web Store has an update_url; an unpacked developer copy doesn't. Only a developer
+// copy may be pointed at another server (a local one): otherwise a child could pair the browser with a server of their own.
+const DEV_BUILD = !(chrome.runtime.getManifest && "update_url" in chrome.runtime.getManifest());
 const REQUEST_TIMEOUT_MS = 8000;
 const CHECK_TIMEOUT_MS = 40000;   // a first-time check may wait on the AI service (with retries)
 const SIGNAL_TIMEOUT_MS = 5000;
@@ -272,6 +275,7 @@ async function guardUrl(tabId, url, st) {
     if (esc) { category = "external_browser"; detail = { scheme: esc.scheme }; }
   }
   if (!category && prot.tamper && R.isTamperUrl(url)) category = "tamper";
+  if (!category && prot.escape && R.isIpUrl(url)) category = "ip_address";   // no site name to judge: a way around the rules
   if (!category && prot.browser_installers && R.isBrowserInstallerUrl(url)) category = "browser_installer";
   if (!category) return false;
 
@@ -383,7 +387,7 @@ async function flushEvents() {
 // ---- pairing, sync, disconnect, pause ---------------------------------------------------------------
 // The server answers a pairing code with the kind of account that issued it; that is what the extension becomes.
 async function pair(code, backendUrl) {
-  const url = String(backendUrl || DEFAULT_BACKEND).trim();
+  const url = DEV_BUILD && backendUrl ? String(backendUrl).trim() : DEFAULT_BACKEND;
   try { new URL(url); } catch (e) { return { ok: false, error: "That server address isn't valid." }; }
   await chrome.storage.local.set({ backendUrl: url });
   try {
@@ -837,7 +841,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // What the popup shows: pairing state, profile name, last sync and, for adults, pause time and password-check settings.
       case "status": {
         const out = { paired: !!st.token, mode, profile: st.profileName, revoked: st.revoked, lastSync: st.lastSync,
-                      backendUrl: st.backendUrl, chat: mode === "adult" || settingsOf(st).companion.chat !== false };
+                      backendUrl: st.backendUrl, devBuild: DEV_BUILD, chat: mode === "adult" || settingsOf(st).companion.chat !== false };
         if (mode === "adult") {
           const cfg = settingsOf(st);
           const { pwStore } = await chrome.storage.local.get({ pwStore: null });

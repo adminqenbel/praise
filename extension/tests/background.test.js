@@ -10,7 +10,7 @@ const vm = require("node:vm");
 const ROOT = path.join(__dirname, "..");
 const NOW = Date.now();
 
-function boot({ local = {}, cookies = [], dynamicRules = [], matched = [], tabs = [], fetchImpl } = {}) {
+function boot({ local = {}, cookies = [], dynamicRules = [], matched = [], tabs = [], fetchImpl, manifest } = {}) {
   const calls = [];
   const store = { ...local };
   const session = {};
@@ -42,7 +42,7 @@ function boot({ local = {}, cookies = [], dynamicRules = [], matched = [], tabs 
     action: { setBadgeText: async (a) => calls.push(["badge", a.text]), setBadgeBackgroundColor: async () => {},
       setTitle: async (a) => calls.push(["title", a.title]), setIcon: async (a) => calls.push(["icon", a.path[16]]) },
     alarms: { create() {}, clear() {}, onAlarm: ev() },
-    runtime: { id: "me", getURL: (p) => "chrome-extension://me/" + p, onInstalled: { addListener(fn) { installed.push(fn); } }, onStartup: ev(),
+    runtime: { id: "me", getURL: (p) => "chrome-extension://me/" + p, getManifest: () => manifest || { version: "0.0.0" }, onInstalled: { addListener(fn) { installed.push(fn); } }, onStartup: ev(),
       onMessage: { addListener(fn) { onMessage = fn; } } },
     webNavigation: { onBeforeNavigate: { addListener(fn) { navListener = fn; } }, onCompleted: ev() },
     downloads: { onCreated: { addListener(fn) { downloadListener = fn; } }, onChanged: ev(), cancel: async (id) => { cancelled.push(id); }, erase: async () => {}, search: async () => [] },
@@ -451,6 +451,22 @@ test("a parent's code makes it the family version; an adult's own code makes it 
   }
 });
 
+test("only an unpacked developer copy can be paired with another server", async () => {
+  const seen = [];
+  const fetchImpl = async (url) => { seen.push(url); return url.endsWith("/api/devices/pair") ? answer({ token: "tok", mode: "family" })() : answer({ child: "Mia", settings: {} })(); };
+  const store = boot({ fetchImpl, manifest: { version: "1.0.0", update_url: "https://clients2.google.com/service/update2/crx" } });
+  assert.strictEqual((await store.send({ type: "status" })).devBuild, false);
+  await store.send({ type: "pair", code: "ABCD2345", backendUrl: "https://kids-own-server.example" });
+  assert.strictEqual(seen[0], "https://api.praise.qenbel.site/api/devices/pair");
+  assert.strictEqual(store.store.backendUrl, "https://api.praise.qenbel.site");
+
+  seen.length = 0;
+  const dev = boot({ fetchImpl });
+  assert.strictEqual((await dev.send({ type: "status" })).devBuild, true);
+  await dev.send({ type: "pair", code: "ABCD2345", backendUrl: "http://localhost:5000" });
+  assert.strictEqual(seen[0], "http://localhost:5000/api/devices/pair");
+});
+
 test("a code from a server that doesn't say defaults to the stricter, family side", async () => {
   const fetchImpl = async (url) => url.endsWith("/api/devices/pair") ? answer({ token: "tok" })() : answer({ child: "Mia", settings: {} })();
   const t = boot({ local: {}, fetchImpl });
@@ -494,6 +510,21 @@ test("a child's browser holds an unknown site on the checking page; a cached blo
   await t.navigate({ frameId: 0, tabId: 6, url: "https://fine.example/" });
   await t.navigate({ frameId: 1, tabId: 6, url: "https://sub.example/" });         // frames are never held
   assert.strictEqual(t.tabUpdates.length, n);
+});
+
+test("a child's browser closes sites opened by IP address; a personal browser and this computer are left alone", async () => {
+  const t = boot({ local: family() });
+  await t.navigate({ frameId: 0, tabId: 4, url: "http://203.0.113.9/proxy?u=casino.example" });
+  const url = new URL(t.tabUpdates.at(-1)[1].url);
+  assert.strictEqual(url.searchParams.get("mode"), "blocked");
+  assert.strictEqual(url.searchParams.get("c"), "ip_address");
+  const n = t.tabUpdates.length;
+  await t.navigate({ frameId: 0, tabId: 4, url: "http://127.0.0.1:8080/" });
+  assert.ok(t.tabUpdates.slice(n).every(([, o]) => !/mode=blocked/.test(o.url)));
+
+  const adult = boot({ local: paired(), fetchImpl: async () => { throw new Error("offline"); } });
+  await adult.navigate({ frameId: 0, tabId: 4, url: "http://203.0.113.9/" });
+  assert.strictEqual(adult.tabUpdates.length, 0);
 });
 
 test("a personal browser never holds a page back for an unknown site", async () => {

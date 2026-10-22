@@ -7,7 +7,7 @@ const DOWNLOAD_KINDS = {
 };
 const SECURITY_TYPES = {
   external_browser: "Tried to open another browser", tamper: "Tried to open browser settings",
-  browser_installer: "Visited a browser download page",
+  browser_installer: "Visited a browser download page", ip_address: "Tried to open a site by its number (IP address)",
 };
 
 // Tabs of the family activity page: which kind of event each shows and how it is filtered.

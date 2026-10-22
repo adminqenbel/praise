@@ -25,6 +25,8 @@ const SPECIAL = {
     "Pages stay in this browser, so the link was stopped."],
   tamper: ["That page is for parents",
     "Only a parent can change browser settings and extensions."],
+  ip_address: ["That address is only numbers",
+    "Sites open by their name here, so they can be checked first."],
 };
 
 // While waiting for a parent, ask again every 8 seconds (only while the tab is visible).
