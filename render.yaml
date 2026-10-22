@@ -1,4 +1,4 @@
-# Render blueprint for the Praise API (https://api.praise.qenbel.site).
+# Render blueprint for the Praise API (https://api.praise.qenbel.site). Also the reference for a hand-made Web Service.
 # Secrets marked `sync: false` are entered once in the Render dashboard and never committed.
 # Migrations are a release step run from a developer machine (`flask --app app db upgrade` with DATABASE_URL set to
 # Supabase's session pooler), not on boot.

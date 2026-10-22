@@ -16,6 +16,6 @@ Read `HANDOFF.md` first (what exists, what differs from local, what is known to 
 
 ## Checks to run before saying something works
 
-- Backend: `cd backend; python -m pytest tests` (SQLite by default; set `TEST_DATABASE_URL` for a throwaway PostgreSQL).
+- Backend: `cd backend; python -m pytest tests` (SQLite by default; set `TEST_DATABASE_URL` for a throwaway PostgreSQL). Never the Supabase project: its pooler ignores a `search_path` option, so the fixtures would create and drop tables in `public`.
 - Browser code: `node --test tests/*.test.js` inside `common/`, `extension/` and `dashboard/` (100, 51 and 6 tests at hand-off, all passing).
 - Extension end to end: `scripts/e2e_pair.js`, `scripts/e2e_chat.js`, `scripts/e2e_pet.js` (see README, headless Chrome).
