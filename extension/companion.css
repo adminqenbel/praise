@@ -1,0 +1,155 @@
+/* The buddy: sprite, expression overlay, speech bubble, effects. Animation names are prefixed `buddy-`. */
+
+.buddy { --buddy-h: 220px; position: relative; display: inline-flex; flex-direction: column; align-items: center; vertical-align: bottom; }
+.buddy-walk { display: flex; flex-direction: column; align-items: center; will-change: transform; }
+.buddy-turn { position: relative; display: inline-block; line-height: 0; transform-origin: 50% 85%; transition: transform .3s ease-out;
+  transform: perspective(700px) rotateY(calc(var(--lx, 0) * 14deg)) rotateX(calc(var(--ly, 0) * -7deg)); }
+.buddy-body { cursor: pointer; position: relative; display: inline-block; line-height: 0; transform-origin: 50% 92%; animation: buddy-bob 3.2s ease-in-out infinite; will-change: transform; }
+.buddy-base { display: block; width: auto; user-select: none; -webkit-user-drag: none; }
+.buddy-face { position: absolute; height: auto; pointer-events: none; user-select: none; transition: transform .14s ease-out; }
+.buddy-shadow { width: calc(var(--buddy-h) * .5); height: calc(var(--buddy-h) * .07); margin-top: calc(var(--buddy-h) * -.03); border-radius: 50%; background: radial-gradient(closest-side, rgba(60, 40, 110, .28), transparent); }
+.buddy-adult .buddy-shadow { background: radial-gradient(closest-side, rgba(15, 42, 43, .3), transparent); }
+
+/* ---- speech bubble ---- */
+.buddy-bubble { position: relative; max-width: min(300px, 80vw); margin-bottom: 14px; padding: .65rem .95rem; border-radius: 16px; background: #fff; color: #2b2140; font: 600 .98rem/1.35 "Figtree", "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 6px 20px rgba(43, 33, 64, .16); text-align: left; }
+.buddy-adult .buddy-bubble { border-radius: 10px; color: #0f2a2b; border: 1px solid #d5e0df; box-shadow: 0 4px 14px rgba(15, 42, 43, .12); font-family: "Instrument Sans", "Segoe UI", system-ui, sans-serif; }
+.buddy-bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: inherit; border-radius: 3px; transform: translateX(-50%) rotate(45deg); border-right: inherit; border-bottom: inherit; }
+.buddy-adult .buddy-bubble::after { border: 0; border-right: 1px solid #d5e0df; border-bottom: 1px solid #d5e0df; }
+.buddy-bubble.pop { animation: buddy-pop .32s cubic-bezier(.3, 1.5, .5, 1); }
+.buddy-bubble[hidden] { display: none; }
+
+/* ---- side layout (popups): the buddy on the left, its words on the right ---- */
+.buddy-side { flex-direction: row; align-items: center; gap: 10px; width: 100%; }
+.buddy-side .buddy-walk { order: 1; flex: none; }
+.buddy-side .buddy-bubble { order: 2; flex: 1; margin: 0; max-width: none; font-size: .9rem; }
+.buddy-side .buddy-shadow { display: none; }
+.buddy-side .buddy-bubble::after { left: -6px; bottom: auto; top: 50%; transform: translateY(-50%) rotate(45deg); border: 0; border-left: inherit; border-bottom: inherit; }
+.buddy-side.buddy-adult .buddy-bubble::after { border-left: 1px solid #d5e0df; border-bottom: 1px solid #d5e0df; border-right: 0; }
+.buddy-side .buddy-fx { right: -10%; }
+
+/* ---- floating symbols: ?  !  ...  z z z ---- */
+.buddy-fx { position: absolute; top: 2%; right: -4%; font: 800 calc(var(--buddy-h) * .16)/1 "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif; color: #8b5cf6; line-height: 1; pointer-events: none; animation: buddy-float 2.4s ease-in-out infinite; }
+.buddy-adult .buddy-fx { color: #0e7c7b; }
+.buddy[data-mood="alert"] .buddy-fx { color: #e0a100; }
+.buddy[data-mood="sleepy"] .buddy-fx { font-size: calc(var(--buddy-h) * .1); letter-spacing: .1em; }
+.buddy-fx[hidden] { display: none; }
+
+/* ---- moods: one gentle motion each, layered over the idle bob ---- */
+.buddy[data-mood="happy"] .buddy-body { animation: buddy-sway 3.6s ease-in-out infinite; }
+.buddy[data-mood="nod"] .buddy-body { animation: buddy-nod 2.6s ease-in-out infinite; }
+.buddy[data-mood="curious"] .buddy-body { animation: buddy-tilt 3s ease-in-out infinite; }
+.buddy[data-mood="thinking"] .buddy-body { animation: buddy-think 3.4s ease-in-out infinite; }
+.buddy[data-mood="sleepy"] .buddy-body { animation: buddy-droop 5s ease-in-out infinite; }
+.buddy[data-mood="alert"] .buddy-body { animation: buddy-alert .55s cubic-bezier(.3, 1.6, .5, 1) 1, buddy-bob 3s ease-in-out .6s infinite; }
+.buddy[data-mood="sorry"] .buddy-body { animation: buddy-sag 3.6s ease-in-out infinite; }
+.buddy[data-mood="shy"] .buddy-body { animation: buddy-shy 3.2s ease-in-out infinite; }
+.buddy[data-mood="celebrate"] .buddy-body { animation: buddy-jump .7s cubic-bezier(.3, .8, .4, 1) 4; }
+
+.buddy.entering .buddy-body { animation: buddy-enter .7s cubic-bezier(.3, 1.4, .5, 1) both; }
+.buddy.entering .buddy-bubble { opacity: 0; }
+.buddy.entered .buddy-bubble { animation: buddy-pop .32s cubic-bezier(.3, 1.5, .5, 1); }
+
+.buddy-confetti { position: absolute; left: 50%; top: 10%; width: 9px; height: 14px; border-radius: 2px; pointer-events: none; animation: buddy-fall 1.9s ease-in var(--d, 0s) both; }
+
+@keyframes buddy-bob { 50% { transform: translateY(-4px); } }
+@keyframes buddy-sway { 0%, 100% { transform: rotate(-1.5deg) translateY(0); } 50% { transform: rotate(1.5deg) translateY(-4px); } }
+@keyframes buddy-nod { 0%, 100% { transform: translateY(0); } 15% { transform: translateY(6px) rotate(1deg); } 30% { transform: translateY(0); } 45% { transform: translateY(5px); } 60% { transform: translateY(0); } }
+@keyframes buddy-tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(4deg) translateY(-3px); } }
+@keyframes buddy-think { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(-5deg) translateY(-3px); } }
+@keyframes buddy-droop { 0%, 100% { transform: rotate(3deg) translateY(2px) scaleY(.99); } 50% { transform: rotate(5deg) translateY(5px) scaleY(.975); } }
+@keyframes buddy-alert { 0% { transform: scale(.94); } 60% { transform: scale(1.07); } 100% { transform: scale(1); } }
+@keyframes buddy-sag { 0%, 100% { transform: rotate(-2deg) translateY(2px) scaleY(.985); } 50% { transform: rotate(-3deg) translateY(4px) scaleY(.97); } }
+@keyframes buddy-shy { 0%, 100% { transform: rotate(3deg) translateX(0); } 50% { transform: rotate(5deg) translateX(3px); } }
+@keyframes buddy-jump { 0%, 100% { transform: translateY(0) scale(1, 1); } 20% { transform: translateY(0) scale(1.04, .94); } 55% { transform: translateY(-26px) scale(.97, 1.04); } }
+@keyframes buddy-enter { 0% { transform: translateY(60px) scale(.7); opacity: 0; } 60% { transform: translateY(-10px) scale(1.04); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes buddy-pop { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes buddy-float { 0%, 100% { transform: translateY(0) rotate(6deg); opacity: .9; } 50% { transform: translateY(-8px) rotate(-4deg); opacity: 1; } }
+@keyframes buddy-fall { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(var(--x, 0), calc(var(--buddy-h) * 1.1)) rotate(var(--r, 180deg)); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .buddy-turn, .buddy-walk, .buddy-face { transition: none !important; }
+  .buddy-p { display: none; }
+  .buddy-body, .buddy[data-mood] .buddy-body, .buddy-fx, .buddy-bubble.pop, .buddy.entered .buddy-bubble { animation: none !important; }
+  .buddy.entering .buddy-bubble { opacity: 1; }
+}
+
+/* ---- a buddy with a line of speech, used at the top of dashboard pages ---- */
+.buddy-bar { display: flex; margin: 0 0 1.2rem; min-height: 100px; }
+.buddy-bar .buddy-side { width: auto; max-width: 560px; }
+@media (max-width: 640px) { .buddy-bar .buddy-side { max-width: 100%; } }
+
+/* ---- life: things the buddy does on its own and when played with. Classes sit on .buddy, so they win over the mood motion. ---- */
+.buddy-p { position: absolute; top: 12%; font: 700 calc(var(--buddy-h) * .09)/1 system-ui, sans-serif; pointer-events: none; animation: buddy-rise 1.9s ease-out var(--d, 0s) both; }
+.buddy.act-hop[data-mood] .buddy-body { animation: buddy-hop .8s cubic-bezier(.3, .8, .4, 1) 1; }
+.buddy.act-wiggle[data-mood] .buddy-body { animation: buddy-wiggle .8s ease-in-out 1; }
+.buddy.act-stretch[data-mood] .buddy-body { animation: buddy-stretch 1.5s ease-in-out 1; }
+.buddy.act-hum[data-mood] .buddy-body { animation: buddy-hum .6s ease-in-out 4; }
+.buddy.act-yawn[data-mood] .buddy-body { animation: buddy-yawn 1.5s ease-in-out 1; }
+.buddy.act-poke[data-mood] .buddy-body { animation: buddy-poke .48s cubic-bezier(.3, 1.6, .5, 1) 1; }
+.buddy.act-spin[data-mood] .buddy-body { animation: buddy-spin 1.2s cubic-bezier(.4, 0, .3, 1) 1; }
+.buddy.act-flip[data-mood] .buddy-body { animation: buddy-flip .95s cubic-bezier(.4, .1, .4, 1) 1; }
+.buddy.act-purr[data-mood] .buddy-body { animation: buddy-purr 1.1s ease-in-out 2; }
+.buddy.walking[data-mood] .buddy-body { animation: buddy-waddle .5s ease-in-out infinite; }
+.buddy.asleep[data-mood] .buddy-body { animation: buddy-sleep 4.4s ease-in-out infinite; }
+.buddy.asleep .buddy-fx { color: #6a5fa8; }
+
+@keyframes buddy-hop { 0%, 100% { transform: translateY(0) scale(1, 1); } 15% { transform: translateY(0) scale(1.06, .9); } 50% { transform: translateY(-34px) scale(.96, 1.06); } 80% { transform: translateY(0) scale(1.05, .93); } }
+@keyframes buddy-wiggle { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(-7deg); } 35% { transform: rotate(6deg); } 55% { transform: rotate(-5deg); } 75% { transform: rotate(3deg); } }
+@keyframes buddy-stretch { 0%, 100% { transform: scale(1, 1); } 35% { transform: scale(.94, 1.1) translateY(-6px); } 65% { transform: scale(.94, 1.1) translateY(-6px) rotate(-3deg); } }
+@keyframes buddy-hum { 0%, 100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-6px); } }
+@keyframes buddy-yawn { 0%, 100% { transform: scale(1); } 40%, 60% { transform: scale(1.05, 1.07) translateY(-4px) rotate(-2deg); } }
+@keyframes buddy-poke { 0% { transform: scale(1, 1); } 30% { transform: scale(1.14, .84) translateY(6px); } 65% { transform: scale(.94, 1.1) translateY(-6px); } 100% { transform: scale(1, 1); } }
+@keyframes buddy-spin { 0% { transform: perspective(700px) rotateY(0) translateY(0); } 40% { transform: perspective(700px) rotateY(360deg) translateY(-18px); } 100% { transform: perspective(700px) rotateY(1080deg) translateY(0) rotate(0); } }
+@keyframes buddy-flip { 0% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-48px) rotate(-180deg); } 100% { transform: translateY(0) rotate(-360deg); } }
+@keyframes buddy-purr { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.04, .97) rotate(2deg); } }
+@keyframes buddy-waddle { 0%, 100% { transform: rotate(-3.5deg) translateY(0); } 25% { transform: rotate(0) translateY(-5px); } 50% { transform: rotate(3.5deg) translateY(0); } 75% { transform: rotate(0) translateY(-5px); } }
+@keyframes buddy-sleep { 0%, 100% { transform: rotate(5deg) translateY(4px) scale(1, .985); } 50% { transform: rotate(6deg) translateY(7px) scale(1.01, .965); } }
+@keyframes buddy-rise { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--x, 0), calc(var(--buddy-h) * -.55)) scale(1.1); opacity: 0; } }
+
+/* ---- the chat panel (common/chat-ui.js) ---- */
+.chat { box-sizing: border-box; width: min(300px, 86vw); display: flex; flex-direction: column; margin: 0 0 10px; overflow: hidden;
+  background: #fff; color: #2b2140; border-radius: 18px; box-shadow: 0 10px 30px rgba(43, 33, 64, .25); text-align: left;
+  font: 400 14px/1.4 "Figtree", "Instrument Sans", "Segoe UI", system-ui, sans-serif; pointer-events: auto; }
+.chat *, .chat *::before, .chat *::after { box-sizing: border-box; }
+.chat[hidden] { display: none; }
+.chat-head { display: flex; align-items: center; justify-content: space-between; padding: .5rem .5rem .5rem .8rem; background: #f1ecfb; }
+.chat-x { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-weight: 700; font-size: 20px; line-height: 1; cursor: pointer; }
+.chat-x:hover { background: rgba(43, 33, 64, .1); }
+.chat-log { display: flex; flex-direction: column; gap: .4rem; max-height: 220px; min-height: 64px; overflow-y: auto; padding: .65rem .7rem; }
+.chat-msg { max-width: 88%; padding: .42rem .7rem; border-radius: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-msg.bot { align-self: flex-start; background: #f1ecfb; border-bottom-left-radius: 4px; }
+.chat-msg.me { align-self: flex-end; background: #7c4dde; color: #fff; border-bottom-right-radius: 4px; }
+.chat-typing { display: inline-flex; gap: 4px; align-items: center; min-height: 1.9em; }
+.chat-typing i { width: 6px; height: 6px; border-radius: 50%; background: #8b7bb0; animation: chat-dot 1s ease-in-out infinite; }
+.chat-typing i:nth-child(2) { animation-delay: .15s; }
+.chat-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes chat-dot { 0%, 70%, 100% { transform: translateY(0); opacity: .45; } 35% { transform: translateY(-4px); opacity: 1; } }
+.chat-chips { display: flex; flex-wrap: wrap; gap: .35rem; padding: 0 .7rem .55rem; }
+.chat-chips[hidden] { display: none; }
+.chat-chip { font: inherit; font-size: .82rem; color: inherit; background: #fff; border: 1px solid #d9d2ea; border-radius: 999px; padding: .25rem .65rem; cursor: pointer; }
+.chat-chip:hover { background: #f1ecfb; }
+.chat-form { display: flex; gap: .4rem; padding: .55rem .7rem; border-top: 1px solid #eee8f7; }
+.chat-form input { flex: 1; min-width: 0; font: inherit; color: inherit; background: #fff; border: 1px solid #d9d2ea; border-radius: 10px; padding: .45rem .6rem; }
+.chat-send { font: inherit; font-weight: 700; color: #fff; background: #7c4dde; border: 0; border-radius: 10px; padding: .45rem .8rem; cursor: pointer; }
+.chat-send:disabled { opacity: .55; cursor: default; }
+.chat-note { margin: 0; padding: 0 .75rem .55rem; font-size: .75rem; color: #6b6280; }
+.chat :focus-visible { outline: 2px solid #7c4dde; outline-offset: 2px; }
+.chat-inline { width: 100%; margin: 0; box-shadow: none; border: 1px solid #d9d2ea; }
+
+.chat[data-who="adult"] { color: #0f2a2b; border-radius: 10px; box-shadow: 0 8px 24px rgba(15, 42, 43, .2); font-family: "Instrument Sans", "Segoe UI", system-ui, sans-serif; }
+.chat[data-who="adult"] .chat-head { background: #f2f5f4; border-bottom: 1px solid #d5e0df; }
+.chat[data-who="adult"] .chat-x:hover { background: rgba(15, 42, 43, .08); }
+.chat[data-who="adult"] .chat-msg { border-radius: 8px; }
+.chat[data-who="adult"] .chat-msg.bot { background: #f2f5f4; border: 1px solid #e1e9e8; }
+.chat[data-who="adult"] .chat-msg.me { background: #0e7c7b; }
+.chat[data-who="adult"] .chat-typing i { background: #6e9190; }
+.chat[data-who="adult"] .chat-chip { border-color: #c9d6d5; border-radius: 6px; }
+.chat[data-who="adult"] .chat-chip:hover { background: #f2f5f4; }
+.chat[data-who="adult"] .chat-form { border-top-color: #d5e0df; }
+.chat[data-who="adult"] .chat-form input { border-color: #c9d6d5; border-radius: 6px; }
+.chat[data-who="adult"] .chat-send { background: #0e7c7b; border-radius: 6px; }
+.chat[data-who="adult"] .chat-note { color: #55706f; }
+.chat[data-who="adult"] :focus-visible { outline-color: #0e7c7b; }
+.chat-inline[data-who="adult"] { border-color: #d5e0df; }
+@media (prefers-reduced-motion: reduce) { .chat-typing i { animation: none; opacity: .8; } }

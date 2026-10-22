@@ -1,0 +1,141 @@
+@font-face { font-family: "Bricolage Grotesque"; src: url("../fonts/bricolage.woff2") format("woff2"); font-weight: 500 800; font-display: swap; }
+@font-face { font-family: "Figtree"; src: url("../fonts/figtree.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Instrument Sans"; src: url("../fonts/instrument-sans.woff2") format("woff2"); font-weight: 400 700; font-stretch: 75% 100%; font-display: swap; }
+
+/* One popup, three looks. Everything below uses these tokens; each mode only changes the tokens and a few shapes.
+   neutral (before a pairing code): plain white and ink, like the Praise landing page.
+   family: the warm violet glass.   adult: the calm teal on porcelain. */
+:root {
+  --ink: #141b2d; --slate: #4f5870; --line: #e3e6ee; --page: #fff; --panel: #fff; --panel-line: #e3e6ee;
+  --accent: #141b2d; --accent-ink: #0b1020; --focus: #141b2d; --danger: #b3261e; --check: #141b2d;
+  --code-bg: #f5f6fa; --code-line: #c9cedc; --btn-bg: #141b2d; --btn-fg: #fff; --btn-line: #141b2d;
+  --quiet-line: #c9cedc; --quiet-hover: #f5f6fa;
+  --radius: 12px; --btn-radius: 8px; --font: "Instrument Sans", "Segoe UI", system-ui, sans-serif; --head-font: var(--font);
+}
+body[data-mode="family"] {
+  --ink: #2b2140; --slate: #5d5470; --line: rgba(43,33,64,.12); --accent: #8b5cf6; --focus: #ffb627; --danger: #c2314b; --check: #8b5cf6;
+  --panel: rgba(255,255,255,.58); --panel-line: rgba(255,255,255,.85); --code-bg: #fff3d1; --code-line: #ffb627;
+  --btn-bg: #2b2140; --btn-line: #2b2140; --quiet-line: rgba(43,33,64,.22); --quiet-hover: rgba(255,255,255,.7);
+  --radius: 22px; --btn-radius: 999px; --font: "Figtree", "Segoe UI", system-ui, sans-serif; --head-font: "Bricolage Grotesque", "Segoe UI", sans-serif;
+}
+body[data-mode="adult"] {
+  --ink: #0f2a2b; --slate: #4b6162; --line: #d5e0df; --page: #f2f5f4; --accent: #0e7c7b; --accent-ink: #095b5a; --focus: #0e7c7b; --check: #0e7c7b;
+  --code-bg: #dcefed; --code-line: #a7d0cc; --btn-bg: #0f2a2b; --btn-line: #0f2a2b; --quiet-line: #b4c5c3; --quiet-hover: #f2f5f4;
+}
+
+* { box-sizing: border-box; }
+body { width: 336px; margin: 0; padding: 14px; background: var(--page); color: var(--ink);
+  font: 14.5px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+body[data-mode="family"] { padding: 16px;
+  background-color: #efe9fb;
+  background-image:
+    radial-gradient(52rem 38rem at 6% -8%, rgba(139, 92, 246, .56), transparent 62%),
+    radial-gradient(46rem 34rem at 98% 4%, rgba(232, 80, 138, .44), transparent 62%),
+    radial-gradient(44rem 34rem at 84% 98%, rgba(74, 143, 231, .46), transparent 62%),
+    radial-gradient(38rem 30rem at -4% 92%, rgba(255, 182, 39, .48), transparent 62%),
+    radial-gradient(34rem 26rem at 58% 48%, rgba(47, 191, 155, .26), transparent 62%);
+  background-attachment: fixed; background-repeat: no-repeat; }
+
+header { display: flex; align-items: center; gap: 10px; margin: 2px 2px 12px; }
+body[data-mode="family"] header { margin-bottom: 14px; }
+.titles { min-width: 0; }
+h1 { margin: 0; font: 650 1.3rem/1.1 var(--head-font); letter-spacing: -0.01em; }
+body[data-mode="adult"] h1 { font-stretch: 84%; }
+body[data-mode="family"] h1 { font-weight: 700; font-size: 1.4rem; letter-spacing: -0.02em; }
+h2 { font: 650 .98rem var(--font); margin: 14px 0 6px; }
+.sub { margin: 2px 0 0; color: var(--slate); font-size: .86rem; }
+/* before pairing the wordmark is the title and the heading sits under it */
+body[data-mode="neutral"] header { flex-direction: column; align-items: flex-start; gap: 6px; }
+body[data-mode="neutral"] h1 { font-size: 1.05rem; font-weight: 600; color: var(--slate); }
+
+/* marks: the wordmark before pairing, then the family door or the shield ring */
+.wordmark { display: inline-flex; align-items: center; gap: .4rem; font: 700 1.35rem var(--font); letter-spacing: -0.02em; }
+.wordmark .dots { display: inline-flex; gap: 3px; }
+.wordmark .dots i { width: .5rem; height: .5rem; border-radius: 50%; display: block; }
+.wordmark .dots i:first-child { background: #6d49de; }
+.wordmark .dots i:last-child { background: #0e7c7b; }
+.mark { flex: none; }
+#markFamily { width: 24px; height: 30px; fill: #8b5cf6; }
+#markFamily circle { fill: #ffb627; }
+#markAdult { width: 30px; height: 30px; }
+#markAdult path { stroke: #0e7c7b; }
+#markNeutral, #markFamily, #markAdult { display: none; }
+body[data-mode="neutral"] #markNeutral { display: inline-flex; }
+body[data-mode="family"] #markFamily { display: block; }
+body[data-mode="adult"] #markAdult { display: block; }
+
+.buddy-row { margin: 0 0 12px; min-height: 96px; }
+.talk { margin: 0 0 12px; }
+#chatBox { margin: 0 0 12px; }
+#chatBox[hidden], .talk[hidden] { display: none; }
+#chatBox .chat-log { max-height: 190px; }
+/* the popup's own button and input rules are broad; the chat panel keeps its own look */
+body #chatBox .chat button { width: auto; font: inherit; background: transparent; border: 0; color: inherit; filter: none; }
+body #chatBox .chat .chat-x { width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 20px; font-weight: 700; }
+body #chatBox .chat .chat-chip { padding: .25rem .65rem; font-size: .82rem; font-weight: 400; background: #fff; border: 1px solid #d9d2ea; border-radius: 999px; }
+body #chatBox .chat .chat-chip:hover:not(:disabled) { background: #f1ecfb; }
+body #chatBox .chat .chat-send { padding: .45rem .8rem; font-size: .95rem; font-weight: 700; color: #fff; background: #7c4dde; border-radius: 10px; }
+body #chatBox .chat .chat-form input { width: auto; flex: 1; margin: 0; padding: .45rem .6rem; border: 1px solid #d9d2ea; border-radius: 10px; background: #fff; color: inherit; font: inherit; }
+body[data-mode="adult"] #chatBox .chat .chat-chip { border-color: #c9d6d5; border-radius: 6px; }
+body[data-mode="adult"] #chatBox .chat .chat-chip:hover:not(:disabled) { background: #f2f5f4; }
+body[data-mode="adult"] #chatBox .chat .chat-send { background: #0e7c7b; border-radius: 6px; }
+body[data-mode="adult"] #chatBox .chat .chat-form input { border-color: #c9d6d5; border-radius: 6px; }
+p { margin: 0 0 12px; }
+.meta { color: var(--slate); font-size: .86rem; margin: 10px 0 4px; }
+body[data-mode="family"] .meta { font-size: .88rem; }
+.state { font: 600 1rem/1.35 var(--font); }
+label { display: block; font-weight: 600; margin-bottom: 5px; }
+.sr { position: absolute; left: -9999px; }
+input { width: 100%; padding: 9px 12px; font: inherit; border: 1px solid var(--quiet-line); border-radius: 8px; background: #fff; color: var(--ink); margin-bottom: 12px; }
+body[data-mode="family"] input { border: 1.5px solid rgba(43,33,64,.16); background: rgba(255,255,255,.75); border-radius: 14px; padding: 10px 14px; }
+input:focus { border-color: var(--accent); outline: none; }
+#code { font: 700 1.2rem/1.2 Consolas, monospace; letter-spacing: .2em; text-transform: uppercase; text-align: center; background: var(--code-bg); border-color: var(--code-line); }
+details { margin-bottom: 14px; color: var(--slate); }
+summary { cursor: pointer; font-weight: 600; }
+details input { margin-top: 8px; margin-bottom: 0; }
+
+button { width: 100%; font: 650 .95rem var(--font); padding: 9px 10px; border-radius: var(--btn-radius); cursor: pointer; border: 1.5px solid var(--btn-line); background: var(--btn-bg); color: var(--btn-fg); }
+body[data-mode="family"] button { font-weight: 700; font-size: 1rem; padding: 11px; border-width: 2px; }
+button:hover:not(:disabled) { background: var(--accent-ink); border-color: var(--accent-ink); }
+body[data-mode="family"] button:hover:not(:disabled) { background: var(--btn-bg); border-color: var(--btn-line); filter: brightness(1.2); }
+button.quiet { background: transparent; color: var(--ink); border-color: var(--quiet-line); }
+body[data-mode="family"] button.quiet { background: rgba(255,255,255,.45); }
+button.quiet:hover:not(:disabled) { background: var(--quiet-hover); border-color: var(--ink); color: var(--ink); filter: none; }
+button.link { background: none; border: 0; color: var(--accent-ink); text-decoration: underline; padding: 4px 0; width: auto; font-weight: 600; }
+body[data-mode="family"] button.link { color: var(--slate); padding-top: 10px; font-size: .88rem; }
+button.link:hover:not(:disabled) { background: none; filter: none; }
+button:disabled { opacity: .55; cursor: default; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.error { margin: 10px 0 0; color: var(--danger); font-weight: 650; }
+.row { display: flex; gap: 8px; }
+.row button { padding: 8px 6px; font-size: .88rem; }
+body[data-mode="family"] .row button { padding: 9px 6px; font-size: .92rem; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0 12px; }
+
+/* each state sits on a small panel: frosted glass for the family, flat white otherwise, and none before pairing */
+.view { background: var(--panel); border: 1px solid var(--panel-line); border-radius: var(--radius); padding: 14px; }
+body[data-mode="family"] .view, body[data-mode="family"] .petbox {
+  -webkit-backdrop-filter: blur(18px) saturate(165%); backdrop-filter: blur(18px) saturate(165%);
+  box-shadow: 0 8px 24px rgba(60,40,110,.12), inset 0 1px 0 rgba(255,255,255,.85); }
+body[data-mode="family"] .view { padding: 16px; }
+body[data-mode="neutral"] .view { border: 0; padding: 0; background: none; }
+#family p:last-of-type, #revoked p:last-child { margin-bottom: 0; }
+#family .meta { margin-bottom: 14px; }
+
+.petbox { margin: 0 0 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--panel-line); border-radius: var(--radius); }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 600; margin: 0 0 6px; cursor: pointer; }
+.check input { width: auto; margin: 0; accent-color: var(--check); }
+.check.off { opacity: .55; }
+.petbox .meta { margin: 6px 0 0; }
+
+#famLeaveForm { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+#famLeaveForm .meta { margin-bottom: 10px; }
+
+.site { display: inline-block; margin: 0 0 6px; padding: 1px 9px; background: var(--page); border: 1px solid var(--line); border-radius: 6px; font-weight: 650; font-size: .85rem; word-break: break-all; }
+.stats { list-style: none; margin: 0 0 4px; padding: 0; }
+.stats li { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); }
+.stats li:first-child { border-top: 0; }
+.stats b { font-variant-numeric: tabular-nums; }
+#report .row button { font-size: .84rem; padding: 8px 4px; }
+#pauseRow { margin-top: 14px; }
+[hidden] { display: none !important; }

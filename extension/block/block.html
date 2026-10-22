@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checking this site</title>
+  <link rel="stylesheet" href="../companion.css">
+  <link rel="stylesheet" href="block.css">
+</head>
+<body>
+  <!-- the screen: two panels that close over the page and slide apart again when a parent says yes -->
+  <div class="curtain" id="curtain" data-shut="false" aria-hidden="true"><i></i><i></i></div>
+
+  <main class="stage" id="stage" data-state="checking">
+    <div class="buddy-slot" id="buddy"></div>
+
+    <section class="words" aria-live="polite">
+      <h1 id="title">Checking this site</h1>
+      <p id="lede">Hang on, this only takes a moment.</p>
+
+      <p class="site" id="site" hidden></p>
+
+      <div class="risk" id="risk" hidden>
+        <div class="risk-bar"><span id="riskFill"></span></div>
+        <p id="riskText"></p>
+      </div>
+
+      <div class="actions" id="actions" hidden>
+        <button type="button" class="primary" id="back">Go back</button>
+        <button type="button" class="quiet" id="ask">Ask a parent to open it</button>
+      </div>
+      <p class="confirm" id="confirm" role="status" hidden></p>
+    </section>
+  </main>
+
+  <script src="../lib.js"></script>
+  <script src="../companion.js"></script>
+  <script src="../companion-ui.js"></script>
+  <script src="block.js"></script>
+</body>
+</html>

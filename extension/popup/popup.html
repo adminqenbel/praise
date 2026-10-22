@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Praise</title>
+  <link rel="stylesheet" href="../companion.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<!-- One popup for every account. It starts neutral and takes the look of whichever account issued the pairing code:
+     data-mode is "neutral", "family" or "adult" (set by popup.js). -->
+<body data-mode="neutral">
+  <header>
+    <span class="wordmark" id="markNeutral" aria-label="Praise">Praise <span class="dots" aria-hidden="true"><i></i><i></i></span></span>
+    <svg viewBox="0 0 24 30" class="mark" id="markFamily" aria-hidden="true"><path d="M2 30V12C2 5 7 1 12 1s10 4 10 11v18z"/><circle cx="16.5" cy="19" r="2.4"/></svg>
+    <svg viewBox="0 0 200 200" class="mark" id="markAdult" fill="none" stroke-width="26" stroke-linecap="round" aria-hidden="true"><path d="M 28 62 A 80 80 0 0 1 82 21"/><path d="M 135 21 A 80 80 0 0 1 179 62"/><path d="M 179 138 A 80 80 0 0 1 138 179"/><path d="M 62 179 A 80 80 0 0 1 21 138"/></svg>
+    <div class="titles">
+      <h1 id="heading">Connect this browser</h1>
+      <p class="sub" id="sub" hidden></p>
+    </div>
+  </header>
+
+  <div class="buddy-row" id="buddy" hidden></div>
+  <button type="button" class="quiet talk" id="talkBtn" hidden>Talk to <b class="buddy-name">your buddy</b></button>
+  <div id="chatBox" hidden></div>
+
+  <section id="petBox" class="petbox" hidden>
+    <label class="check"><input type="checkbox" id="petOn"> <span>Show <b class="buddy-name">your buddy</b> on web pages</span></label>
+    <label class="check" id="petQuietRow"><input type="checkbox" id="petQuiet"> <span>Quiet: no speech</span></label>
+    <p class="meta"><span class="buddy-name">Your buddy</span> waits in the corner of web pages. Right-click to move or hide it.</p>
+  </section>
+
+  <!-- family: a child's browser -->
+  <section id="family" class="view" hidden>
+    <p id="famLine"></p>
+    <p class="meta" id="famSync"></p>
+    <button type="button" id="famSyncBtn">Check for new rules</button>
+    <button type="button" class="link" id="famLeaveBtn">Disconnect this browser</button>
+    <form id="famLeaveForm" hidden>
+      <p class="meta">A parent's password is needed. Once it's disconnected, this browser is no longer protected.</p>
+      <label for="famLeavePw">Parent's password</label>
+      <input id="famLeavePw" type="password" autocomplete="off" maxlength="256" required>
+      <div class="row">
+        <button type="button" class="quiet" id="famLeaveCancel">Stay connected</button>
+        <button type="submit" id="famLeaveGo">Disconnect</button>
+      </div>
+      <p class="error" id="famLeaveError" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <!-- adult: your own browser -->
+  <section id="adult" class="view" hidden>
+    <p class="state" id="adState"></p>
+    <div id="report" hidden>
+      <h2>On this page</h2>
+      <p class="site" id="reportSite"></p>
+      <ul class="stats">
+        <li><span>Trackers blocked</span><b id="nTrackers">0</b></li>
+        <li><span>Cross-site ID scripts blocked</span><b id="nFingerprint">0</b></li>
+        <li><span>Tracking links cleaned</span><b id="nLinks">0</b></li>
+      </ul>
+      <h2>Cookies</h2>
+      <p id="cookieLine" class="meta"></p>
+      <div class="row">
+        <button type="button" class="quiet" id="clearSite">Clear this site's cookies</button>
+        <button type="button" class="quiet" id="clearTrack">Remove tracking cookies</button>
+      </div>
+      <p class="meta" id="cleared" role="status" hidden></p>
+    </div>
+
+    <div id="pwSection" hidden>
+      <h2>Passwords</h2>
+      <p class="meta" id="pwBreach" hidden>Passwords you type are checked against known breaches. Only the first 5 characters of a scrambled copy leave your browser, to the Have I Been Pwned service.</p>
+      <p class="meta" id="pwReuse" hidden></p>
+      <button type="button" class="quiet" id="forgetPw" hidden>Forget remembered passwords</button>
+    </div>
+
+    <div class="row" id="pauseRow">
+      <button type="button" class="quiet" id="pause1">Pause for 1 hour</button>
+      <button type="button" class="quiet" id="pauseDay">Until tomorrow</button>
+    </div>
+    <button type="button" id="resume" hidden>Turn protection back on</button>
+    <p class="meta" id="adSync"></p>
+    <button type="button" class="link" id="adSyncBtn">Check for new rules</button>
+    <hr>
+    <button type="button" class="quiet" id="adLeaveBtn">Disconnect this browser</button>
+    <p class="meta" id="adLeaveNote" role="status" hidden></p>
+  </section>
+
+  <section id="revoked" class="view" hidden>
+    <p id="revokedLine"></p>
+  </section>
+
+  <!-- neutral: no account yet -->
+  <form id="pairForm" class="view" hidden>
+    <p>Open your Praise dashboard, choose a browser to protect, and enter its 8-character code here. This extension then becomes the right one for that account.</p>
+    <label for="code">Pairing code</label>
+    <input id="code" name="code" autocomplete="off" maxlength="8" spellcheck="false" required>
+
+    <details>
+      <summary>Server address</summary>
+      <label for="server" class="sr">Server address</label>
+      <input id="server" name="server" type="url" spellcheck="false">
+    </details>
+
+    <button type="submit" id="connect">Connect this browser</button>
+    <p class="error" id="error" role="alert" hidden></p>
+  </form>
+
+  <script src="../companion.js"></script>
+  <script src="../companion-ui.js"></script>
+  <script src="../chat-ui.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+[
+ {
+  "id": 1,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "adsymptotic.com",
+    "agkn.com",
+    "bkrtx.com",
+    "bluecava.com",
+    "crwdcntrl.net",
+    "exelator.com",
+    "eyeota.net",
+    "fingerprint.com",
+    "fpcdn.io",
+    "fpjs.io",
+    "id5-sync.com",
+    "iovation.com",
+    "liveramp.com",
+    "lotame.com",
+    "online-metrix.net",
+    "rlcdn.com",
+    "tapad.com"
+   ],
+   "domainType": "thirdParty",
+   "resourceTypes": [
+    "script",
+    "xmlhttprequest",
+    "image",
+    "sub_frame",
+    "ping",
+    "media",
+    "font",
+    "stylesheet",
+    "other"
+   ]
+  }
+ }
+]

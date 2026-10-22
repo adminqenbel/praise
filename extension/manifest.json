@@ -1,0 +1,73 @@
+{
+  "manifest_version": 3,
+  "name": "Praise",
+  "version": "0.2.0",
+  "description": "One extension for every Praise account. Enter a pairing code and it becomes your family's protection or your own shield.",
+  "minimum_chrome_version": "110",
+  "permissions": [
+    "webNavigation",
+    "storage",
+    "alarms",
+    "tabs",
+    "downloads",
+    "cookies",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Praise",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "block/block.html",
+        "warn/warn.html"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    },
+    {
+      "resources": [
+        "companion/*.png"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "trackers",
+        "enabled": false,
+        "path": "rules/trackers.json"
+      },
+      {
+        "id": "fingerprint",
+        "enabled": false,
+        "path": "rules/fingerprint.json"
+      }
+    ]
+  }
+}

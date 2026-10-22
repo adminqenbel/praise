@@ -1,0 +1,46 @@
+@font-face { font-family: "Instrument Sans"; src: url("../fonts/instrument-sans.woff2") format("woff2"); font-weight: 400 700; font-stretch: 75% 100%; font-display: swap; }
+
+:root {
+  --ink: #0f2a2b; --slate: #4b6162; --line: #d5e0df; --porcelain: #f2f5f4; --teal: #0e7c7b; --teal-ink: #095b5a;
+  --caution: #e0a100; --caution-ink: #6b4700; --danger: #b3261e;
+  --font: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--porcelain); color: var(--ink); font: 17px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+
+.stage { --rail: var(--caution); min-height: 100%; display: grid; grid-template-columns: minmax(150px, 240px) minmax(0, 580px); gap: clamp(1.25rem, 4vw, 3rem); align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+.buddy-slot { display: flex; justify-content: center; align-items: flex-end; }
+@media (max-width: 760px) { .stage { grid-template-columns: 1fr; justify-items: center; } .panel { width: 100%; } }
+
+/* the screen: a dark shutter that lifts when the warning appears and comes down again when you continue */
+.shutter { position: fixed; inset: 0; z-index: 5; background: var(--ink); pointer-events: none; transition: transform .55s cubic-bezier(.6, 0, .2, 1); }
+.shutter[data-shut="up"] { transform: translateY(-101%); animation: shutter-lift .6s cubic-bezier(.6, 0, .2, 1) both; }
+.shutter[data-shut="down"] { transform: translateY(0); }
+@keyframes shutter-lift { from { transform: translateY(0); } to { transform: translateY(-101%); } }
+@media (prefers-reduced-motion: reduce) { .shutter { transition: none; animation: none !important; } .shutter[data-shut="up"] { transform: translateY(-101%); } }
+.stage[data-mode="blocked"] { --rail: var(--danger); }
+
+.panel { width: 100%; background: #fff; border: 1px solid var(--line); border-left: 6px solid var(--rail); border-radius: 12px; padding: clamp(1.4rem, 4vw, 2.2rem); }
+.glyph { width: 56px; height: 56px; margin-bottom: 1rem; }
+.glyph path { stroke: var(--rail); }
+.glyph .bang { stroke: var(--rail); }
+
+h1 { font: 650 clamp(1.7rem, 4vw, 2.2rem)/1.12 var(--font); font-stretch: 84%; letter-spacing: -0.01em; margin: 0 0 .5rem; }
+h2 { font: 650 1rem var(--font); font-stretch: 88%; margin: 1.3rem 0 .35rem; }
+#lede { margin: 0 0 .9rem; color: var(--slate); font-size: 1.08rem; }
+.site { display: inline-block; margin: 0 0 .3rem; padding: .15rem .65rem; background: var(--porcelain); border: 1px solid var(--line); border-radius: 6px; font-weight: 650; word-break: break-all; }
+ul { margin: 0; padding-left: 1.2rem; color: var(--slate); }
+li { margin: .25rem 0; }
+
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem; align-items: center; }
+.btn, button { font: 650 1rem var(--font); cursor: pointer; padding: .62rem 1.15rem; border-radius: 8px; border: 1.5px solid var(--ink); text-decoration: none; display: inline-block; }
+.primary { background: var(--ink); color: #fff; }
+.primary:hover { background: var(--teal-ink); border-color: var(--teal-ink); }
+.quiet { background: transparent; color: var(--ink); border-color: #b4c5c3; }
+.quiet:hover { background: var(--porcelain); border-color: var(--ink); }
+.good { background: var(--teal); border-color: var(--teal); color: #fff; }
+.good:hover { background: var(--teal-ink); border-color: var(--teal-ink); }
+:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.fine { margin: .9rem 0 0; font-size: .92rem; color: var(--slate); }
+[hidden] { display: none !important; }

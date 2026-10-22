@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Praise Shield</title>
+  <link rel="stylesheet" href="../companion.css">
+  <link rel="stylesheet" href="warn.css">
+</head>
+<body>
+  <div class="shutter" id="shutter" data-shut="up" aria-hidden="true"></div>
+  <main class="stage" id="stage" data-mode="warn">
+    <div class="buddy-slot" id="buddy"></div>
+    <section class="panel" aria-labelledby="title">
+      <svg class="glyph" viewBox="0 0 200 200" fill="none" stroke-width="22" stroke-linecap="round" aria-hidden="true">
+        <path d="M 28 62 A 80 80 0 0 1 82 21"/><path d="M 135 21 A 80 80 0 0 1 179 62"/>
+        <path d="M 179 138 A 80 80 0 0 1 138 179"/><path d="M 62 179 A 80 80 0 0 1 21 138"/>
+        <path class="bang" d="M100 62v50M100 134v2" stroke-width="16"/>
+      </svg>
+
+      <h1 id="title">This page looks risky</h1>
+      <p id="lede"></p>
+      <p class="site" id="site" hidden></p>
+
+      <div id="whyBox" hidden>
+        <h2>Why we think so</h2>
+        <ul id="why"></ul>
+      </div>
+
+      <div class="actions">
+        <a class="btn good" id="real" href="#" hidden></a>
+        <button type="button" class="primary" id="back">Go back</button>
+        <button type="button" class="quiet" id="go" hidden>Continue anyway</button>
+      </div>
+      <p class="fine" id="fine" hidden>Only continue if you're sure. We'll remember that choice for an hour.</p>
+    </section>
+  </main>
+
+  <script src="../companion.js"></script>
+  <script src="../companion-ui.js"></script>
+  <script src="warn.js"></script>
+</body>
+</html>

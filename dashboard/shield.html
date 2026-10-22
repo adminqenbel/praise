@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" data-theme="adult">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Praise Shield: protection that speaks up only when it matters</title>
+  <meta name="description" content="Praise Shield warns you about scams and fake bank pages, keeps trackers out, and pauses a form before sensitive data goes somewhere risky.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <link rel="stylesheet" href="css/shield.css?v=b2">
+</head>
+<body class="shield-site">
+  <header class="sh-bar">
+    <a class="sh-mark" href="shield.html" aria-label="Praise Shield, home">
+      <svg width="26" height="26" viewBox="0 0 200 200" fill="none" stroke-width="26" stroke-linecap="round" aria-hidden="true">
+        <path d="M 28 62 A 80 80 0 0 1 82 21" stroke="#0e7c7b"/><path d="M 135 21 A 80 80 0 0 1 179 62" stroke="#0e7c7b"/>
+        <path d="M 179 138 A 80 80 0 0 1 138 179" stroke="#0e7c7b"/><path d="M 62 179 A 80 80 0 0 1 21 138" stroke="#0e7c7b"/>
+      </svg>
+      Praise Shield
+    </a>
+    <nav aria-label="Main">
+      <a href="#layers">What it does</a>
+      <a href="#data">What leaves your device</a>
+      <a href="#limits">Limits</a>
+    </nav>
+    <a class="sh-btn quiet" href="home.html">Sign in</a>
+  </header>
+
+  <main class="sh-main" id="main">
+    <section class="sh-hero" aria-labelledby="h">
+      <div>
+        <h1 id="h">Browse as you do. Shield speaks up when it matters.</h1>
+        <p class="lede">It warns you about scams and fake bank pages, keeps trackers out, and pauses a form before sensitive data goes somewhere risky. The rest of the time it stays out of your way.</p>
+        <div class="row">
+          <a class="sh-btn" href="home.html?signup&amp;for=adult">Create an account for me</a>
+          <a class="sh-btn quiet" href="index.html">Back to all of Praise</a>
+        </div>
+      </div>
+      <div class="sh-demo" aria-labelledby="demo-h">
+        <h2 id="demo-h" class="visually-hidden" style="position:absolute;left:-9999px">Protection ring demonstration</h2>
+        <div id="ringHost"></div>
+        <ul class="layers" id="layerList"></ul>
+        <p class="hint">Try it: switch a layer off and the ring shows what you'd give up.</p>
+      </div>
+    </section>
+
+    <section class="sh-section" id="layers" aria-labelledby="l-h">
+      <h2 id="l-h">Four layers, each one yours to adjust</h2>
+      <div class="sh-rows">
+        <div class="sh-row"><h3>Safe browsing</h3><p>Checks new sites as you open them. A scam page or a look-alike bank site gets a warning with the reason, and the real address when it imitates one. Known malware is blocked outright.</p></div>
+        <div class="sh-row"><h3>Trackers and cookies</h3><p>Blocks advertising and cross-site trackers, removes tracking codes such as <em>fbclid</em> from links, and clears tracking cookies. A report for each page shows what was stopped.</p></div>
+        <div class="sh-row"><h3>Data guard</h3><p>Asks before card numbers, ID numbers, one-time codes or passwords go to a flagged page, an unencrypted one, or a form that posts to a different site. It checks on your device and never sees what you typed.</p></div>
+        <div class="sh-row"><h3>Password safety</h3><p>Tells you when a password has appeared in known breaches, without sending the password anywhere. Optionally warns when you reuse one across sites.</p></div>
+      </div>
+    </section>
+
+    <section class="sh-section" id="data" aria-labelledby="d-h">
+      <h2 id="d-h">What it asks to see, and what leaves your device</h2>
+      <table class="sh-table">
+        <thead><tr><th scope="col">What</th><th scope="col">Where it goes</th><th scope="col">When</th></tr></thead>
+        <tbody>
+          <tr><td>The address of a site you open (never the path or query)</td><td>Your own Praise server, and its AI model</td><td>Only for sites without a saved verdict</td></tr>
+          <tr><td>That a warning was shown, and the kind of data involved</td><td>Your own Praise server</td><td>After each warning</td></tr>
+          <tr><td>The first 5 characters of a scrambled copy of a password</td><td>Have I Been Pwned</td><td>When breach checking is on</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--slate);margin:.9rem 0 0;max-width:62ch">What you type, the full scrambled copy of a password, cookie contents, and page paths never leave your device. Every permission is explained in the project's documentation.</p>
+    </section>
+
+    <section class="sh-section" id="limits" aria-labelledby="lim-h">
+      <h2 id="lim-h">Honest limits, and who is in control</h2>
+      <div class="sh-two">
+        <div class="sh-panel">
+          <h3>What it can't do</h3>
+          <ul>
+            <li>It only sees the browser it's installed in.</li>
+            <li>A form that sends data with a script, rather than a normal submit, can't be intercepted, and forms inside embedded frames aren't watched.</li>
+            <li>The AI can be wrong. A scam page with no obvious signs can look fine until a reviewer catches it.</li>
+          </ul>
+        </div>
+        <div class="sh-panel">
+          <h3>You're in charge</h3>
+          <ul>
+            <li>Pause it for an hour or until tomorrow from the toolbar.</li>
+            <li>Choose what to warn about, block or clean up, one setting at a time.</li>
+            <li>Continue past any warning except known malware.</li>
+            <li>Browsing history is deleted after 90 days.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="sh-cta" aria-labelledby="c-h">
+      <div>
+        <h2 id="c-h">Protect your own browsing</h2>
+        <p>Create an account, connect your browser with a one-time code, and keep the defaults or change any of them.</p>
+      </div>
+      <a class="sh-btn" href="home.html?signup&amp;for=adult">Create an account for me</a>
+    </section>
+  </main>
+
+  <footer class="sh-foot">
+    <span>Praise Shield</span>
+    <a href="index.html">All of Praise</a>
+    <a href="family.html">Praise for families</a>
+    <a href="home.html">Sign in</a>
+  </footer>
+
+  <script src="js/ring.js?v=b2"></script>
+  <script src="js/shield-landing.js?v=b2"></script>
+</body>
+</html>

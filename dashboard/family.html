@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Praise for families: a front door for every child's browser</title>
+  <meta name="description" content="Praise checks each site before it opens, keeps the ones your family ruled out closed, and lets you say yes when your child asks.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <link rel="stylesheet" href="css/dashboard.css?v=b2">
+  <link rel="stylesheet" href="css/landing.css?v=b2">
+</head>
+<body class="landing">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Praise, all versions">
+      <svg viewBox="0 0 24 30" aria-hidden="true"><path fill="#8b5cf6" d="M2 30V12C2 5 7 1 12 1s10 4 10 11v18z"/><circle cx="16.5" cy="19" r="2.4" fill="#ffb627"/></svg>
+      Praise
+    </a>
+    <nav aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#does">What it does</a>
+      <a href="#decides">Who decides</a>
+      <a href="#limits">Limits</a>
+    </nav>
+    <div class="who">
+      <a class="btn quiet small" href="home.html">Sign in</a>
+      <a class="btn small" href="home.html?signup">Create account</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ================= hero ================= -->
+    <section class="hero-wrap">
+      <div class="hero-copy">
+        <h1>A front door for every child's browser.</h1>
+        <p class="lede">Praise checks each site before it opens. Your family's rules keep the wrong doors closed, and when your child asks, you decide whether to open one.</p>
+        <div class="row">
+          <a class="btn" href="home.html?signup">Create your family account</a>
+          <a class="btn quiet" href="#how">See how it works</a>
+        </div>
+        <p class="fine">Runs on your own computer. Works in Chrome.</p>
+      </div>
+
+      <div class="hero-stage">
+        <button type="button" class="hero-door" id="heroDoor" aria-pressed="false" aria-describedby="doorCaption">
+          <svg viewBox="0 0 160 236" aria-hidden="true">
+            <defs>
+              <radialGradient id="inside" cx="50%" cy="60%" r="70%">
+                <stop offset="0" stop-color="#fff6cf"/><stop offset=".55" stop-color="#ffc94d"/><stop offset="1" stop-color="#f08a24"/>
+              </radialGradient>
+              <linearGradient id="gloss" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <circle class="lamp-halo" cx="80" cy="30" r="26"/>
+            <path class="lamp-cap" d="M68 8h24l-3 12H71z"/>
+            <circle class="lamp-glow" cx="80" cy="30" r="9"/>
+            <path class="door-frame" d="M8 230V104C8 66 38 46 80 46s72 20 72 58v126z"/>
+            <path class="inside" d="M22 230V106C22 78 46 60 80 60s58 18 58 46v124z" fill="url(#inside)"/>
+            <g class="leaf">
+              <path class="door-leaf" d="M22 230V106C22 78 46 60 80 60s58 18 58 46v124z"/>
+              <path class="door-gloss" d="M22 230V106C22 78 46 60 80 60s58 18 58 46v124z" fill="url(#gloss)"/>
+              <path class="door-panel" d="M40 214V112c0-16 17-28 40-28s40 12 40 28v102z"/>
+              <circle class="knob" cx="118" cy="160" r="7.5"/>
+            </g>
+            <rect class="mat" x="26" y="226" width="108" height="7" rx="3.5"/>
+          </svg>
+          <span class="caption" id="doorCaption" aria-live="polite">Tap the door.</span>
+        </button>
+
+        <div class="note note-ask" aria-hidden="true">
+          <span class="note-dot" style="--door:#2fbf9b"></span>
+          <p><strong>Mia</strong> asked for <b>gamefaqs.com</b></p>
+          <span class="mini-btn">Approve</span>
+        </div>
+        <div class="note note-closed" aria-hidden="true">
+          <p><strong>This door's closed</strong><br>Gambling sites are closed by your family's rules.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= how it works ================= -->
+    <section class="band" id="how" aria-labelledby="how-h">
+      <h2 id="how-h">Set up in three steps</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-n" aria-hidden="true">1</span>
+          <h3>Connect the browser</h3>
+          <p>Give each child a pairing code, then type it into the Praise extension on their browser. Each code works once and expires after 15 minutes.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">2</span>
+          <h3>Choose the rules</h3>
+          <p>Start from Child safe, Teen or Education, then change anything: kinds of sites, domain endings, downloads and cookies.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">3</span>
+          <h3>Let them browse</h3>
+          <p>Known sites open straight away. A new site waits for a short check, is classified once, and is remembered after that.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ================= what it does ================= -->
+    <section class="features" id="does" aria-labelledby="does-h">
+      <h2 id="does-h">What it does</h2>
+
+      <article class="feature">
+        <div class="feature-text">
+          <h3>Closed means closed, and your child knows why</h3>
+          <p>A closed page says what kind of site it is and which rule closed it, in plain words. Your child can tap "Ask a parent to open it", and the request waits on your dashboard for a yes.</p>
+        </div>
+        <div class="glass mock mock-block" aria-hidden="true">
+          <strong>This door's closed</strong>
+          <p>Gambling sites are closed by your family's rules.</p>
+          <div class="bar hot"><span style="width:90%"></span></div>
+          <small>Risk score 90 out of 100</small>
+          <div class="row"><span class="mini-btn dark">Go back</span><span class="mini-btn">Ask a parent to open it</span></div>
+        </div>
+      </article>
+
+      <article class="feature flip">
+        <div class="feature-text">
+          <h3>Money stays out of reach</h3>
+          <p>Banking, payments, UPI, wallets, trading, crypto and loans are closed by default in Child safe. Look-alike sign-in pages that imitate a bank are flagged as fake, even on a domain nobody has seen before.</p>
+        </div>
+        <div class="glass mock" aria-hidden="true">
+          <ul class="mock-list">
+            <li>paypal.com <span class="chip bad">Closed</span></li>
+            <li>phonepe.com <span class="chip bad">Closed</span></li>
+            <li>secure-examplebank-login.xyz <span class="chip bad">Fake bank page</span></li>
+            <li>khanacademy.org <span class="chip ok">Open</span></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="feature-text">
+          <h3>Downloads and other browsers, handled</h3>
+          <p>Programs, scripts and installers are stopped, and so are pages for downloading another browser and links that try to hand a page to one. Documents and images go through.</p>
+        </div>
+        <div class="glass mock" aria-hidden="true">
+          <ul class="mock-list">
+            <li>ChromeSetup.exe <span class="chip bad">Stopped</span></li>
+            <li>run-me.bat <span class="chip bad">Stopped</span></li>
+            <li>essay.pdf <span class="chip ok">Allowed</span></li>
+            <li>diagram.png <span class="chip ok">Allowed</span></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="feature flip">
+        <div class="feature-text">
+          <h3>See what sites keep in the browser</h3>
+          <p>Cookies are listed by name, site, lifetime and likely purpose, with a confidence level, because a name alone can't prove what a cookie does. Known trackers are removed. Praise never reads a cookie's contents.</p>
+        </div>
+        <div class="glass mock" aria-hidden="true">
+          <ul class="mock-list">
+            <li><span>IDE<br><small>doubleclick.net · lasts 90 days</small></span> <span class="chip bad">Tracker removed</span></li>
+            <li><span>sid<br><small>school.edu · this visit</small></span> <span class="chip ok">Sign-in, kept</span></li>
+          </ul>
+          <small>Likely purpose, shown with how sure we are.</small>
+        </div>
+      </article>
+    </section>
+
+    <!-- ================= who decides ================= -->
+    <section class="band decides" id="decides" aria-labelledby="decides-h">
+      <div class="decides-text">
+        <h2 id="decides-h">Your rules come first. The AI only advises.</h2>
+        <p>When a site is new, an AI model suggests a category and a risk score. It never makes the final call. Praise applies the same fixed order every time, so an AI guess can't override something you decided.</p>
+        <p class="muted">A site is classified once and then remembered, so repeat visits are quick and don't need the AI again.</p>
+      </div>
+      <ol class="ladder">
+        <li>Your own allow, block and approved lists</li>
+        <li>Sites a reviewer has verified</li>
+        <li>Known security threats</li>
+        <li>Your rule for each kind of site</li>
+        <li>Domain endings you've allowed or blocked</li>
+        <li>The AI's suggestion, when it's sure enough</li>
+        <li>Your default for sites nobody has seen</li>
+      </ol>
+    </section>
+
+    <!-- ================= limits & privacy ================= -->
+    <section class="two" id="limits" aria-labelledby="limits-h">
+      <div class="glass panel">
+        <h2 id="limits-h">What Praise doesn't do</h2>
+        <ul class="plain">
+          <li>It protects the browser it's installed in. It can't control other browsers or apps on the computer.</li>
+          <li>A child who can open the browser's extensions page can switch Praise off, unless it's installed with a managed browser policy. Praise closes that page, but that slows a determined child down. It isn't a lock.</li>
+          <li>The AI can be wrong. A site it calls safe is trusted only by the family it was found through until a reviewer verifies it, and you can ask for any classification to be reviewed.</li>
+        </ul>
+      </div>
+      <div class="glass panel">
+        <h2>Privacy</h2>
+        <ul class="plain">
+          <li>Cookie contents are never collected, only names, sites and lifetimes.</li>
+          <li>Browsing history is deleted after 90 days.</li>
+          <li>The shared site list holds domains and categories, never who visited them.</li>
+          <li>It runs on your own computer, with your own database.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= closing call ================= -->
+    <section class="closing glass" aria-labelledby="close-h">
+      <h2 id="close-h">Ready to set up the first door?</h2>
+      <p>Create an account, add a child, and connect their browser. It takes a few minutes.</p>
+      <div class="row">
+        <a class="btn" href="home.html?signup">Create your family account</a>
+        <a class="btn quiet" href="home.html">Sign in</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Praise</span>
+    <span class="muted">A browser extension, a dashboard and a small server that run on your own computer.</span>
+    <a href="shield.html">Looking for protection for yourself? Praise Shield</a>
+  </footer>
+
+  <script src="js/landing.js?v=b2"></script>
+</body>
+</html>

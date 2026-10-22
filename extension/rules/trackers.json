@@ -1,0 +1,71 @@
+[
+ {
+  "id": 1,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "2mdn.net",
+    "adform.net",
+    "adnxs.com",
+    "ads-twitter.com",
+    "ads.yahoo.com",
+    "adservice.google.com",
+    "adsrvr.org",
+    "advertising.com",
+    "amazon-adsystem.com",
+    "analytics.tiktok.com",
+    "analytics.yahoo.com",
+    "bat.bing.com",
+    "bluekai.com",
+    "casalemedia.com",
+    "clarity.ms",
+    "connect.facebook.net",
+    "criteo.com",
+    "criteo.net",
+    "demdex.net",
+    "doubleclick.net",
+    "everesttech.net",
+    "facebook.net",
+    "geo.yahoo.com",
+    "google-analytics.com",
+    "googleadservices.com",
+    "googlesyndication.com",
+    "googletagmanager.com",
+    "hotjar.com",
+    "krxd.net",
+    "mathtag.com",
+    "mixpanel.com",
+    "openx.net",
+    "outbrain.com",
+    "pixel.facebook.com",
+    "pubmatic.com",
+    "px.ads.linkedin.com",
+    "quantserve.com",
+    "rubiconproject.com",
+    "sc-static.net",
+    "scorecardresearch.com",
+    "segment.com",
+    "segment.io",
+    "smartadserver.com",
+    "snap.licdn.com",
+    "taboola.com",
+    "udc.yahoo.com"
+   ],
+   "domainType": "thirdParty",
+   "resourceTypes": [
+    "script",
+    "xmlhttprequest",
+    "image",
+    "sub_frame",
+    "ping",
+    "media",
+    "font",
+    "stylesheet",
+    "other"
+   ]
+  }
+ }
+]
