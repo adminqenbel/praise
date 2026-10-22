@@ -101,6 +101,9 @@ html[data-theme="neutral"] .auth .switch-mode button { color: var(--n-ink); font
 html[data-theme="neutral"] .auth fieldset.kind label.switch { padding: .55rem .8rem; border: 1.5px solid var(--n-line); border-radius: 10px; margin: .4rem 0; }
 html[data-theme="neutral"] .auth fieldset.kind label.switch:has(input:checked) { border-color: var(--n-ink); background: var(--n-soft); }
 html[data-theme="neutral"] .auth .err { color: #b3261e; }
+html[data-theme="neutral"] .auth .or { text-align: center; color: var(--n-text2); margin: .9rem 0 .5rem; font-size: .95rem; }
+html[data-theme="neutral"] .auth button.google { width: 100%; background: #fff; color: var(--n-ink); border: 1.5px solid #b9c0d0; border-radius: 8px; font: 650 1rem var(--n-font); padding: .65rem 1.3rem; }
+html[data-theme="neutral"] .auth button.google:hover { border-color: var(--n-ink); }
 
 @media (max-width: 860px) {
   .hub-bar nav { display: none; }

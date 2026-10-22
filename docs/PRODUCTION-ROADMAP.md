@@ -16,6 +16,8 @@ Ordered by dependency. Tick items as they land. "Why" notes point at the code th
 ## B. Security and privacy
 
 - [ ] Run the `secure-code-review` pass on auth, device tokens, CORS, SQL, and prompt-injection handling (the plan's M12; only partly done locally). Include Praise Shield's content script and the extension message boundaries.
+- [x] Google sign-in (OpenID Connect + PKCE, identities by `sub`, no automatic linking by email) and one-time
+  disconnect codes from the dashboard instead of the parent's password (`routes/auth.py`, `services/google_auth.py`).
 - [ ] Session and password policy: lockout and alert behaviour, password-reset by email (does not exist yet), email verification, optional 2FA for parents and admins.
 - [ ] Secret management: keys in the platform's secret store, rotation procedure, new Gemini key, per-environment `SECRET_KEY`.
 - [ ] Child-data compliance: parental-consent flow, privacy policy, data-export and deletion endpoints, retention review (events are kept 90 days), data-processing terms with the model provider. Take legal advice for the target regions.

@@ -44,7 +44,12 @@ async function account(type) {
   if (kids.body && kids.body.children && kids.body.children.length) childId = kids.body.children[0].id;
   else childId = (await call("POST", "/api/children", { name: "Mia" }, csrf)).body.id;
   const code = (await call("POST", `/api/children/${childId}/devices`, { label: "E2E browser" }, csrf)).body.pairing_code;
-  return { email, code };
+  // What a parent does on the Children page to let a child's browser leave: a one-time disconnect code for it.
+  const leaveCode = async () => {
+    const kid = (await call("GET", "/api/children")).body.children.find((c) => c.id === childId);
+    return (await call("POST", `/api/devices/${kid.devices[0].id}/disconnect-code`, null, csrf)).body.code;
+  };
+  return { email, code, leaveCode };
 }
 
 // ---- Chrome over the DevTools pipe ------------------------------------------------------------------------
@@ -160,11 +165,11 @@ const hasBuddy = (session) => ev(session, "(() => { const d = [...document.docum
     await sleep(1000);
     if (mode === "family") {
       await ev(p.session, "document.getElementById('famLeaveBtn').click(); 1");
-      await ev(p.session, "document.getElementById('famLeavePw').value = 'wrong-password'; document.getElementById('famLeaveForm').requestSubmit(); 1");
+      await ev(p.session, "document.getElementById('famLeavePw').value = 'WRONG234'; document.getElementById('famLeaveForm').requestSubmit(); 1");
       await sleep(1500);
-      check(await ev(p.session, "document.body.dataset.mode") === "family", "a wrong parent password does not disconnect it");
-      await shot(p.session, "3-family-wrong-password.png");
-      await ev(p.session, `document.getElementById('famLeavePw').value = ${JSON.stringify(PASSWORD)}; document.getElementById('famLeaveForm').requestSubmit(); 1`);
+      check(await ev(p.session, "document.body.dataset.mode") === "family", "a wrong disconnect code does not disconnect it");
+      await shot(p.session, "3-family-wrong-code.png");
+      await ev(p.session, `document.getElementById('famLeavePw').value = ${JSON.stringify(await acct.leaveCode())}; document.getElementById('famLeaveForm').requestSubmit(); 1`);
     } else {
       await ev(p.session, "document.getElementById('adLeaveBtn').click(); document.getElementById('adLeaveBtn').click(); 1");
     }

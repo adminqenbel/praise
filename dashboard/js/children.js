@@ -43,19 +43,31 @@ Praise.start("children.html", async (main, { user }) => {
       const status = d.revoked ? h("span", { class: "chip bad" }, "Removed")
         : !d.paired ? h("span", { class: "chip warn" }, "Waiting for code")
         : h("span", { class: "chip ok" }, "Connected");
+      // A child's browser can only leave with a parent's one-time code, typed into that browser's popup.
+      const leaveCode = adult || !d.paired || d.revoked ? null : h("button", { class: "quiet small", onclick: async (e) => {
+        const out = await act(e.target, () => Api.post(`/api/devices/${d.id}/disconnect-code`));
+        if (!out) return;
+        codeBox.hidden = false;
+        codeBox.replaceChildren(
+          h("p", null, `To disconnect ${d.label || "this browser"}, open the Praise popup on it and enter:`),
+          h("div", { class: "code", "aria-label": "Disconnect code" }, out.code),
+          h("p", { class: "muted", style: "margin-top:.6rem" }, "The code works once, only on that browser, and expires in 15 minutes."),
+          h("button", { class: "quiet small", type: "button", onclick: load }, "Done"));
+      } }, "Disconnect code");
       devices.append(h("li", null,
         h("span", null, h("strong", null, d.label || `Browser ${d.id}`), " ", status,
           d.paired && !d.revoked ? h("span", { class: "muted" }, ` last seen ${timeAgo(d.last_seen)}`) : null),
-        d.revoked ? null : h("button", { class: "danger small", onclick: async (e) => {
-          const btn = e.target;
-          if (btn.dataset.armed !== "1") {      // two-step confirm without a pop-up dialog
-            btn.dataset.armed = "1"; btn.textContent = "Click again to remove";
-            setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Remove browser"; }, 4000);
-            return;
-          }
-          const ok = await act(btn, () => Api.post(`/api/devices/${d.id}/revoke`), "Browser removed");
-          if (ok) load();
-        } }, "Remove browser")));
+        h("span", { style: "display:flex;gap:.5rem;flex-wrap:wrap" }, leaveCode,
+          d.revoked ? null : h("button", { class: "danger small", onclick: async (e) => {
+            const btn = e.target;
+            if (btn.dataset.armed !== "1") {      // two-step confirm without a pop-up dialog
+              btn.dataset.armed = "1"; btn.textContent = "Click again to remove";
+              setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Remove browser"; }, 4000);
+              return;
+            }
+            const ok = await act(btn, () => Api.post(`/api/devices/${d.id}/revoke`), "Browser removed");
+            if (ok) load();
+          } }, "Remove browser"))));
     }
 
     const label = h("input", { type: "text", maxlength: 100, placeholder: "e.g. School laptop", "aria-label": "Browser name" });

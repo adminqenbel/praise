@@ -42,6 +42,11 @@ class Config:
     GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
     # Where the dashboard is served from; the only origin CORS lets in.
     DASHBOARD_ORIGIN = os.environ.get("DASHBOARD_ORIGIN", "http://localhost:5500")
+    # This API's own public address. Google sends the browser back to API_ORIGIN/api/auth/google/callback.
+    API_ORIGIN = os.environ.get("API_ORIGIN", "http://localhost:5000")
+    # Google sign-in (optional): an OAuth "Web application" client. Empty = the button reports it isn't set up.
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024        # reject oversized request bodies
     RATELIMIT_ENABLED = True
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "") == "1"   # set to 1 behind HTTPS
@@ -67,4 +72,9 @@ def production_problems(cfg) -> list[str]:
         problems.append("SESSION_COOKIE_SECURE must be 1 (the service is HTTPS only)")
     if not str(cfg.get("DASHBOARD_ORIGIN", "")).startswith("https://"):
         problems.append("DASHBOARD_ORIGIN must be the https:// address of the dashboard")
+    if cfg.get("GOOGLE_CLIENT_ID"):
+        if not cfg.get("GOOGLE_CLIENT_SECRET"):
+            problems.append("GOOGLE_CLIENT_SECRET is missing (GOOGLE_CLIENT_ID is set)")
+        if not str(cfg.get("API_ORIGIN", "")).startswith("https://"):
+            problems.append("API_ORIGIN must be the https:// address of this API for Google sign-in")
     return problems

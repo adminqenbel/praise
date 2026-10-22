@@ -22,8 +22,8 @@ def hash_password(pw: str) -> str:
     return generate_password_hash(pw)
 
 
-def verify_password(pw: str, pw_hash: str) -> bool:
-    return check_password_hash(pw_hash, pw)
+def verify_password(pw: str, pw_hash: str | None) -> bool:
+    return bool(pw_hash) and check_password_hash(pw_hash, pw)   # a Google-only login has no password to match
 
 
 # Pairing codes and device tokens are stored as SHA-256 hashes, so a database leak does not reveal them.
@@ -79,9 +79,19 @@ def login_required(role: str | None = None):
 
 # ---- device pairing / tokens ---------------------------------------------
 
+def _one_time_code() -> str:
+    return "".join(secrets.choice(_CODE_ALPHABET) for _ in range(8))
+
+
+def _expired(at: datetime | None) -> bool:
+    if at is not None and at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)   # SQLite hands back naive datetimes
+    return at is None or at < datetime.now(timezone.utc)
+
+
 # Create a short one-time code for a device and store only its hash and expiry.
 def new_pairing_code(device: Device) -> str:
-    code = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(8))
+    code = _one_time_code()
     device.pairing_code_hash = sha256(code)
     device.pairing_expires_at = datetime.now(timezone.utc) + PAIRING_TTL
     return code
@@ -95,10 +105,7 @@ def redeem_pairing_code(code: str) -> tuple[Device, str] | None:
     device = Device.query.filter_by(pairing_code_hash=sha256(code), revoked=False).first()
     if device is None:
         return None
-    expires = device.pairing_expires_at
-    if expires is not None and expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-    if expires is None or expires < datetime.now(timezone.utc):
+    if _expired(device.pairing_expires_at):
         device.pairing_code_hash = None
         return None
     # Success: issue a long random device token (shown once, stored hashed) and burn the code.
@@ -108,6 +115,30 @@ def redeem_pairing_code(code: str) -> tuple[Device, str] | None:
     device.pairing_expires_at = None
     device.paired_at = datetime.now(timezone.utc)
     return device, token
+
+
+# A parent's permission for one browser to leave: shown in the dashboard, typed into that browser's popup. Same shape
+# and lifetime as a pairing code; only its hash is stored, and it is good for that one browser only.
+def new_disconnect_code(device: Device) -> str:
+    code = _one_time_code()
+    device.disconnect_code_hash = sha256(code)
+    device.disconnect_expires_at = datetime.now(timezone.utc) + PAIRING_TTL
+    return code
+
+
+def redeem_disconnect_code(device: Device, code: str) -> bool:
+    """One-time: True burns the code."""
+    code = (code or "").strip().upper()
+    if len(code) != 8 or not device.disconnect_code_hash:
+        return False
+    if _expired(device.disconnect_expires_at):
+        device.disconnect_code_hash = None
+        return False
+    if not hmac.compare_digest(sha256(code), device.disconnect_code_hash):
+        return False
+    device.disconnect_code_hash = None
+    device.disconnect_expires_at = None
+    return True
 
 
 # Decorator for extension routes: the request must carry a valid, unrevoked device token as a Bearer header.

@@ -163,7 +163,7 @@ $("pairForm").addEventListener("submit", async (e) => {
   btn.textContent = "Connect this browser";
 });
 
-// ---- family: sync, and disconnecting with a parent's password ------------------------------------------------------
+// ---- family: sync, and disconnecting with a parent's code ----------------------------------------------------------
 // Ask the worker to fetch the latest rules now.
 $("famSyncBtn").addEventListener("click", async () => {
   $("famSyncBtn").disabled = true;
@@ -174,7 +174,8 @@ $("famSyncBtn").addEventListener("click", async () => {
   $("famSyncBtn").disabled = false;
 });
 
-// Disconnecting asks for a parent's password, so a child can't switch the protection off from here.
+// Disconnecting asks for a one-time code from the parent's dashboard (or the parent's password; the server accepts
+// either in this one field), so a child can't switch the protection off from here.
 function leaveOpen(open) {
   $("famLeaveForm").hidden = !open;
   $("famLeaveBtn").hidden = open;
@@ -189,7 +190,7 @@ $("famLeaveForm").addEventListener("submit", async (e) => {
   const go = $("famLeaveGo");
   go.disabled = true;
   $("famLeaveError").hidden = true;
-  const res = await send({ type: "disconnect", password: $("famLeavePw").value });
+  const res = await send({ type: "disconnect", code: $("famLeavePw").value });
   go.disabled = false;
   if (res && res.ok) { leaveOpen(false); await render(true); return; }
   $("famLeaveError").textContent = (res && res.error) || "Couldn't disconnect. Try again.";

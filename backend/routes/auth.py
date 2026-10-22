@@ -1,15 +1,18 @@
+import hmac
 import logging
 import re
+import time
+from urllib.parse import urlencode
 
-from flask import Blueprint, current_app, g, jsonify, request, session
+from flask import Blueprint, current_app, g, jsonify, redirect, request, session
 
-from database.models import Child, Device, User
+from database.models import Child, Device, OAuthIdentity, User, utcnow
 from database.postgres import db
-from services import space_service
+from services import google_auth, space_service
 from ai.companion_llm import get_companion
 from services.ratelimit import client_ip, rate_limit
 from services.auth_service import (csrf_token, current_user, err, hash_password, login_required,
-                                   login_user, new_pairing_code, redeem_pairing_code,
+                                   login_user, new_disconnect_code, new_pairing_code, redeem_pairing_code,
                                    verify_password)
 
 # Sign-up, login, spaces, children and device pairing for the dashboard, plus the one public endpoint the extension uses to pair.
@@ -24,8 +27,21 @@ _DUMMY_HASH = hash_password("dummy-password-for-timing")
 
 def _user_json(u: User):
     # account_type is the space being shown; spaces lists every space this login has set up
+    google = OAuthIdentity.query.filter_by(user_id=u.id, provider="google").first() is not None
     return {"id": u.id, "email": u.email, "role": u.role, "account_type": space_service.active(u),
-            "spaces": space_service.enabled(u)}
+            "spaces": space_service.enabled(u), "google": google, "has_password": u.password_hash is not None}
+
+
+def _new_account(email: str, password_hash: str | None, account_type: str) -> User:
+    """A family account starts empty; an adult account starts with one profile for the person themself."""
+    user = User(email=email, password_hash=password_hash, role="parent",
+                account_type=account_type, has_family=account_type == "family", has_adult=False)
+    db.session.add(user)
+    db.session.flush()
+    if account_type == "adult":
+        # An adult protects themselves: one "self" profile with a balanced Shield rule set.
+        space_service.enable(user, "adult")
+    return user
 
 
 # Create an account. A family account starts empty; an adult account starts with one profile for the person themself.
@@ -46,13 +62,7 @@ def register():
     account_type = data.get("account_type", "family")
     if account_type not in ("family", "adult"):
         return err("account_type must be family or adult", 400)
-    user = User(email=email, password_hash=hash_password(password), role="parent",
-                account_type=account_type, has_family=account_type == "family", has_adult=False)
-    db.session.add(user)
-    db.session.flush()
-    if account_type == "adult":
-        # An adult protects themselves: one "self" profile with a balanced Shield rule set.
-        space_service.enable(user, "adult")
+    user = _new_account(email, hash_password(password), account_type)
     db.session.commit()
     login_user(user)
     return jsonify(user=_user_json(user), csrf=csrf_token()), 201
@@ -73,9 +83,10 @@ def login():
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
     user = User.query.filter_by(email=email).first()
+    # A Google-only login has no password: still hash once, so timing doesn't tell it apart.
     ok = len(password) <= MAX_PASSWORD and verify_password(
-        password, user.password_hash if user else _DUMMY_HASH)
-    if not user or not ok:
+        password, user.password_hash if user and user.password_hash else _DUMMY_HASH)
+    if not user or not user.password_hash or not ok:
         log.warning("failed login ip=%s", client_ip())
         return err("invalid credentials", 401)
     login_user(user)
@@ -86,6 +97,84 @@ def login():
 def logout():
     session.clear()
     return jsonify(ok=True)
+
+
+# ---- Google sign-in -------------------------------------------------------------------------------------------------
+# The dashboard sends the browser to /auth/google/start; Google sends it back to /auth/google/callback, which signs in
+# and returns it to a dashboard page. Problems come back as ?google_error=<reason> for the sign-in form to explain.
+GOOGLE_ATTEMPT_SECONDS = 600
+_PAGE = re.compile(r"^[a-z]+\.html$")
+
+
+def _dashboard(page: str | None, error: str | None = None):
+    """Back to the dashboard: always its configured origin, and only a plain page name, so this is no open redirect."""
+    page = page if page and _PAGE.match(page) else "home.html"
+    query = "?" + urlencode({"google_error": error}) if error else ""
+    return redirect(current_app.config["DASHBOARD_ORIGIN"].rstrip("/") + "/" + page + query)
+
+
+@bp.get("/auth/google/start")
+@rate_limit("google-start", 30, 600)
+def google_start():
+    """Sign in or sign up with Google; with ?link=1, attach Google to the login that is signed in now."""
+    page = request.args.get("next")
+    if not google_auth.enabled(current_app.config):
+        return _dashboard(page, "unavailable")
+    space = request.args.get("space") if request.args.get("space") in ("family", "adult") else "family"
+    link = None
+    if request.args.get("link") == "1":
+        user = current_user()
+        if user is None:
+            return _dashboard(page, "signed_out")
+        link = user.id
+    attempt = google_auth.new_attempt()
+    session["google"] = {**attempt, "space": space, "next": page, "link": link, "at": int(time.time())}
+    return redirect(google_auth.authorize_url(current_app.config, attempt))
+
+
+@bp.get("/auth/google/callback")
+@rate_limit("google-callback", 30, 600)
+def google_callback():
+    attempt = session.pop("google", None)
+    if not attempt or time.time() - attempt.get("at", 0) > GOOGLE_ATTEMPT_SECONDS or \
+            not hmac.compare_digest(str(request.args.get("state", "")), attempt["state"]):
+        return _dashboard(None, "expired")                       # not this browser's attempt, or too old
+    page = attempt.get("next")
+    if request.args.get("error"):
+        return _dashboard(page, "cancelled")                     # the person said no on Google's page
+    try:
+        claims = google_auth.claims_for_code(current_app.config, str(request.args.get("code", "")),
+                                             attempt["verifier"], attempt["nonce"])
+    except google_auth.GoogleAuthError as e:
+        log.warning("failed google sign-in ip=%s reason=%s", client_ip(), e)
+        return _dashboard(page, "failed")
+
+    identity = OAuthIdentity.query.filter_by(provider="google", subject=claims["sub"]).first()
+    if attempt.get("link"):
+        # Attaching Google to the login that started this; that login must still be the one signed in.
+        user = current_user()
+        if user is None or user.id != attempt["link"]:
+            return _dashboard(page, "signed_out")
+        if identity and identity.user_id != user.id:
+            return _dashboard(page, "in_use")
+        identity = identity or OAuthIdentity(user_id=user.id, provider="google", subject=claims["sub"])
+    elif identity:
+        user = identity.user
+    else:
+        # A new Google login. An existing account with the same email is never joined automatically: whoever made it
+        # may not own that address (nothing verified it), so its owner signs in with the password and links Google.
+        if not claims["email_verified"]:
+            return _dashboard(page, "unverified")
+        if User.query.filter_by(email=claims["email"]).first():
+            return _dashboard(page, "email_exists")
+        user = _new_account(claims["email"], None, attempt.get("space", "family"))
+        identity = OAuthIdentity(user_id=user.id, provider="google", subject=claims["sub"])
+    identity.email = claims["email"]
+    identity.last_used_at = utcnow()
+    db.session.add(identity)
+    db.session.commit()
+    login_user(user)
+    return _dashboard(page)
 
 
 @bp.post("/auth/space")
@@ -125,7 +214,7 @@ def me():
     user = current_user()
     if user is None:
         return err("authentication required", 401)
-    return jsonify(user=_user_json(user), csrf=csrf_token())
+    return jsonify(user=_user_json(user), csrf=csrf_token(), google_enabled=google_auth.enabled(current_app.config))
 
 
 # ---- children & device pairing (parent-owned) ---------------------------
@@ -186,6 +275,19 @@ def revoke_device(device_id):
     device.pairing_code_hash = None
     db.session.commit()
     return jsonify(ok=True)
+
+
+# A one-time code that lets this one browser leave the account from its own popup (a child can't make one).
+@bp.post("/devices/<int:device_id>/disconnect-code")
+@login_required()
+def disconnect_code(device_id):
+    device = (Device.query.join(Child).filter(Device.id == device_id,
+                                              Child.parent_id == g.user.id).first())
+    if device is None or device.revoked or device.token_hash is None:
+        return err("not found", 404)
+    code = new_disconnect_code(device)
+    db.session.commit()
+    return jsonify(code=code, expires_in_seconds=900)
 
 
 @bp.post("/devices/pair")

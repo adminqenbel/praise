@@ -32,6 +32,12 @@ services:
         value: "500"
       - key: DASHBOARD_ORIGIN
         value: https://app.praise.qenbel.site
+      - key: API_ORIGIN               # Google returns to API_ORIGIN/api/auth/google/callback
+        value: https://api.praise.qenbel.site
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: SESSION_COOKIE_SECURE
         value: "1"
       - key: TRUSTED_PROXY_HOPS     # Render's load balancer; verify after the first deploy (docs/DEPLOY.md)

@@ -65,7 +65,7 @@ the code is accepted, and it adapts (and re-checks on every sync):
 | What leaves the browser | the address, so a parent's rules can be exact | only the site's origin (`https://example.com/`) |
 | Also watches | downloads, installers for other browsers, "open in another browser" links, the extensions page | trackers (blocked), tracking links (cleaned), the sensitive-data guard and password checks on pages |
 | Pause | not available | for an hour or until tomorrow |
-| Disconnect | needs the parent's password, checked by the server | two clicks |
+| Disconnect | needs a one-time code from the parent's dashboard (or the parent's password), checked by the server | two clicks |
 
 A browser whose mode is missing is treated as family, the stricter side. Each side refuses the other's messages, so a child's
 browser cannot be told to pause itself. Disconnecting removes everything (mode, rules, buddy, scripts) and the extension is neutral
@@ -84,7 +84,7 @@ nothing. Each space shows only its own profiles, rule sets and activity, and sig
 Under the hood the account says which spaces exist (`users.has_family`, `users.has_adult`) and which one is showing
 (`users.account_type`); profiles are told apart by `children.kind` (`child` or `self`) and rule sets by `policies.space`. A
 browser becomes the version of the profile it was paired to, so one login can run a child's browser and its own at once, and
-leaving a child's browser still needs the parent's password. See `backend/services/space_service.py`.
+leaving a child's browser still needs a parent's disconnect code. See `backend/services/space_service.py`.
 
 Built so far: warnings for scams, look-alike bank and payment pages, and known threats, with the
 reason shown and the real site offered; "Continue anyway" for warnings (not for known malware),
@@ -239,7 +239,7 @@ extension:
 - `node scripts/e2e_pair.js shots\` is the full flow against your running backend (`praise.bat mock nobrowser`, plus
   `python -m http.server 8791 --bind 127.0.0.2` for a test page). It signs up a family account and an adult account
   (`@demo.test`, removed by `flask purge-demo`), types each pairing code into the popup, and checks what the extension became:
-  popup look and buddy, page buddy, the guard, how a new site is treated, a wrong parent password, and that disconnecting makes
+  popup look and buddy, page buddy, the guard, how a new site is treated, a wrong disconnect code, and that disconnecting makes
   it neutral again. Screenshots of each state are saved.
 - `node scripts/e2e_chat.js extension shots\` opens the chat like a person would (hover, click, type, send, Escape) on a page
   whose scripts try to read every keystroke, and checks the answers, the caring reply, and that the page saw nothing typed to
@@ -285,7 +285,7 @@ To run the backend tests on PostgreSQL, set `TEST_DATABASE_URL` to a throwaway d
   site data is admin-only.
 - Extension: a long-lived device token (stored hashed) obtained with a one-time pairing code; the pairing reply also says
   whether the account is a family or an adult's own. **Disconnect** is in the popup: a personal browser asks for two clicks
-  (it is your own browser); a family one asks for the parent's password, checked by the server, so
+  (it is your own browser); a family one asks for a one-time disconnect code from the parent's Children page (or the parent's password), checked by the server, so
   a child can't switch protection off. Either way the device is revoked on the server and disappears from the dashboard's
   active list. A browser a parent removed can be paired again with a new code.
   Parents can remove a device; its token stops working immediately.

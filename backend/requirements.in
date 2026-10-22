@@ -7,5 +7,7 @@ sqlalchemy>=2.0
 flask-sqlalchemy>=3.1
 psycopg2-binary>=2.9
 google-genai>=1.0
+google-auth>=2.0      # verifies Google sign-in ID tokens
+requests>=2.31        # Google's token endpoint
 python-dotenv>=1.0
 gunicorn>=23.0

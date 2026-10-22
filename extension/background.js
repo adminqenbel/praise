@@ -403,17 +403,17 @@ async function pair(code, backendUrl) {
   }
 }
 
-// Leaving the account. The server decides whether the parent's password is needed (a child's browser: yes, otherwise
-// the child could simply switch the protection off; an adult's own: they just confirm in the popup). A browser that was
+// Leaving the account. The server decides whether a parent's disconnect code (or password) is needed (a child's browser:
+// yes, otherwise the child could simply switch the protection off; an adult's own: they just confirm in the popup). A browser that was
 // already removed from the account can clear itself. Everything about the pairing goes, so the extension is neutral again;
 // the buddy setting and remembered-password fingerprints are the person's own and stay.
 const PAIRING_KEYS = ["token", "mode", "profileName", "snapshot", "snapshotHash", "revoked", "lastSync", "cache", "cont", "pausedUntil", "eventQueue"];
-async function disconnect(password) {
+async function disconnect(code) {
   const st = await getState();
   let told = true;
   if (st.token && !st.revoked) {
     let r;
-    try { r = await api("/api/ext/disconnect", { method: "POST", body: { password: String(password || "").slice(0, 256) } }); }
+    try { r = await api("/api/ext/disconnect", { method: "POST", body: { code: String(code || "").slice(0, 256) } }); }
     catch (e) {
       // A child's browser can't leave without a parent. A person protecting themselves is never trapped.
       if (!isAdult(st)) return { ok: false, error: "Can't reach the server, so this browser can't be disconnected right now." };
@@ -830,7 +830,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       case "companion_line": return polishLine(msg.who, msg.kind, msg.line);
       case "chat": return chatWith(msg);
       case "pair": return pair(String(msg.code || "").trim(), msg.backendUrl);
-      case "disconnect": return disconnect(msg.password);
+      case "disconnect": return disconnect(msg.code);
       case "sync": await sync(); return { ok: true };
       case "pause": return setPause(msg.minutes);
       case "report": return pageReport(Number(msg.tabId), String(msg.url || ""));

@@ -213,7 +213,8 @@ function spaceSwitch(user) {
 }
 
 // Build the top bar (brand, space switch, links, sign out) and the empty content area. Admins also get the Review queue link.
-function buildShell(user, page, logout) {
+// A login without Google gets "Connect Google" when the server has Google sign-in set up.
+function buildShell(user, page, logout, googleOn) {
   const links = (user.account_type === "adult" ? NAV_ADULT : NAV).slice();
   if (user.role === "admin") links.push(["reviews.html", "Review queue"]);
   const bar = h("header", { class: "topbar" },
@@ -225,9 +226,37 @@ function buildShell(user, page, logout) {
     spaceSwitch(user),
     h("nav", { "aria-label": "Main" }, links.map(([href, label]) =>
       h("a", { href, "aria-current": href === page ? "page" : false }, label))),
-    h("div", { class: "who" }, h("span", { class: "email" }, user.email), h("button", { onclick: logout }, "Sign out")));
+    h("div", { class: "who" }, h("span", { class: "email" }, user.email),
+      googleOn && !user.google
+        ? h("button", { onclick: () => { location.href = googleUrl({ link: 1, next: page }); } }, "Connect Google") : null,
+      h("button", { onclick: logout }, "Sign out")));
   const main = h("main", { class: "main", id: "main" });
   return { shell: h("div", { class: "shell" }, bar, main), main };
+}
+
+// ---- Google sign-in ----------------------------------------------------------------------------
+// A full page visit to the API, which sends the browser to Google and back to `next` (a page of this dashboard).
+// Anything that went wrong comes back as ?google_error=<reason>.
+const googleUrl = (params) => Api.base + "/api/auth/google/start?" + new URLSearchParams(params);
+const GOOGLE_ERRORS = {
+  unavailable: "Google sign-in isn't set up on this server yet. Use your email and password.",
+  cancelled: "Google sign-in was cancelled.",
+  expired: "That Google sign-in took too long, or finished in a different browser. Try again.",
+  failed: "Google couldn't confirm the sign-in. Try again.",
+  unverified: "Google hasn't verified that email address, so it can't open an account.",
+  email_exists: "That email already has an account. Sign in with its password, then use \"Connect Google\" at the top.",
+  in_use: "That Google account is already connected to a different Praise login.",
+  signed_out: "You were signed out. Sign in again, then connect Google.",
+};
+
+// Read and remove ?google_error from the address, so a reload doesn't show it again.
+function takeGoogleError() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get("google_error");
+  if (!code) return null;
+  params.delete("google_error");
+  history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash);
+  return GOOGLE_ERRORS[code] || "Google sign-in didn't work. Try again.";
 }
 
 // ---- auth screen -----------------------------------------------------------------------------
@@ -280,7 +309,7 @@ function authScreen(onDone) {
             ...(mode === "register" ? { account_type: form.querySelector("input[name=acct]:checked").value } : {}) });
         onDone();
       } catch (err) {
-        error.textContent = err.status === 401 ? "That email and password don't match."
+        error.textContent = err.status === 401 ? "That email and password don't match. If you signed up with Google, use Continue with Google."
           : err.status === 409 ? "That email already has an account. Sign in, then use the switch at the top to add the other kind."
           : err.message;
         error.hidden = false;
@@ -291,6 +320,12 @@ function authScreen(onDone) {
   h("div", { class: "field" }, h("label", { for: "password" }, "Password"), password),
   kind, error, submit);
 
+  // Google: signs in an existing Google login, or opens a new account of the kind chosen above.
+  const google = h("button", { type: "button", class: "google", onclick: () => {
+    const space = mode === "register" ? kind.querySelector("input[name=acct]:checked").value : "family";
+    location.href = googleUrl({ space, next: pageFile(location.href) });
+  } }, "Continue with Google");
+
   // Links from the landing pages open the form in sign-up mode, with the right choice selected.
   const params = new URLSearchParams(location.search);
   if (params.has("signup")) toggle.click();
@@ -298,10 +333,13 @@ function authScreen(onDone) {
     kind.querySelector(`input[value=${params.get("for")}]`).checked = true;
     syncWords();
   }
+  const googleError = takeGoogleError();
+  if (googleError) { error.textContent = googleError; error.hidden = false; }
 
   const wordmark = h("a", { class: "wordmark", href: "index.html", "aria-label": "Praise, all versions" },
     "Praise ", h("span", { class: "dots", "aria-hidden": "true" }, h("i"), h("i")));
-  return h("div", { class: "auth" }, h("div", { class: "auth-card" }, wordmark, title, lede, form, toggleText));
+  return h("div", { class: "auth" }, h("div", { class: "auth-card" }, wordmark, title, lede, form,
+    h("p", { class: "or" }, "or"), google, toggleText));
 }
 
 // ---- entry point ---------------------------------------------------------------------------------
@@ -320,7 +358,7 @@ const PAGE_SPECS = {
   "cookies.html": { scripts: ["js/cookies.js"], chart: true },
   "reviews.html": { scripts: ["js/reviews.js"] },
 };
-const CHART_SRC = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";
+const CHART_SRC = "vendor/chart.umd.js";   // Chart.js 4.4.1, vendored: the CSP allows scripts from this site only
 const pageFile = (url) => new URL(url, location.href).pathname.split("/").pop();
 
 // Load a stylesheet once; a missing file does not stop the page.
@@ -378,8 +416,10 @@ const Praise = {
     document.documentElement.dataset.theme = user.account_type === "adult" ? "adult" : "family";
     const { shell, main } = buildShell(user, page, async () => {
       await Api.post("/api/auth/logout"); location.href = "index.html";
-    });
+    }, me.google_enabled);
     document.body.append(shell);
+    const googleError = takeGoogleError();                       // from "Connect Google"
+    if (googleError) toast(googleError, true);
     this.live = { user, bar: shell.querySelector(".topbar"), main, page, leave: [] };
     this.title(page);
     await this.run(page);

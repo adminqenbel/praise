@@ -576,34 +576,34 @@ test("the guard and the buddy are registered when the code is accepted, and each
 // ---- a child's browser: leaving needs a parent --------------------------------------------------------------------
 const kidMore = () => family({ lastSync: 5, cache: { "a.com": {} }, eventQueue: [{ kind: "browser" }], pet: { on: true, quiet: false } });
 
-test("disconnecting a child's browser asks the server with the parent's password, then forgets the pairing but keeps the buddy setting", async () => {
+test("disconnecting a child's browser sends the parent's disconnect code, then forgets the pairing but keeps the buddy setting", async () => {
   const seen = [];
   const t = boot({ local: kidMore(), fetchImpl: async (url, o) => { seen.push([url, o]); return answer({ ok: true })(); } });
-  assert.deepStrictEqual(await t.send({ type: "disconnect", password: "hunter22" }), { ok: true, told: true });
+  assert.deepStrictEqual(await t.send({ type: "disconnect", code: "K7QX2MPA" }), { ok: true, told: true });
   assert.strictEqual(seen[0][0], "http://localhost:5000/api/ext/disconnect");
   assert.strictEqual(seen[0][1].headers.Authorization, "Bearer t");
-  assert.deepStrictEqual(JSON.parse(seen[0][1].body), { password: "hunter22" });
+  assert.deepStrictEqual(JSON.parse(seen[0][1].body), { code: "K7QX2MPA" });
   for (const k of ["token", "mode", "profileName", "snapshot", "lastSync", "cache", "eventQueue"]) assert.ok(!(k in t.store), k);
   assert.deepStrictEqual(t.store.pet, { on: true, quiet: false });
   assert.strictEqual((await t.send({ type: "status" })).paired, false);
 });
 
-test("a wrong password, too many tries, or an unreachable server leave a child's browser connected", async () => {
+test("a wrong code, too many tries, or an unreachable server leave a child's browser connected", async () => {
   for (const [fetchImpl, pattern] of [
-    [answer({ error: "That isn't the parent's password." }, 403), /parent's password/],
+    [answer({ error: "That isn't a current disconnect code from the parent's dashboard." }, 403), /disconnect code/],
     [answer({ error: "Too many attempts. Try again in 60 seconds." }, 429), /Too many/],
     [async () => { throw new Error("offline"); }, /reach the server/],
     [answer(null, 500), /didn't answer/],
   ]) {
     const t = boot({ local: kidMore(), fetchImpl });
-    const res = await t.send({ type: "disconnect", password: "x" });
+    const res = await t.send({ type: "disconnect", code: "x" });
     assert.strictEqual(res.ok, false);
     assert.match(res.error, pattern);
     assert.strictEqual(t.store.token, "t");
   }
 });
 
-test("a child's browser a parent already removed can clear itself without a password", async () => {
+test("a child's browser a parent already removed can clear itself without a code", async () => {
   let asked = false;
   const gone = boot({ local: family({ revoked: true }), fetchImpl: async () => { asked = true; throw new Error("no"); } });
   assert.deepStrictEqual(await gone.send({ type: "disconnect" }), { ok: true, told: true });
@@ -616,7 +616,7 @@ test("a child's browser a parent already removed can clear itself without a pass
 test("only the extension's own pages can ask to disconnect, never a web page", async () => {
   const t = boot({ local: kidMore(), fetchImpl: answer({}) });
   let replied = false;
-  assert.strictEqual(t.listener({ type: "disconnect", password: "x" }, { id: "me", url: "https://evil.example/" }, () => { replied = true; }), false);
+  assert.strictEqual(t.listener({ type: "disconnect", code: "x" }, { id: "me", url: "https://evil.example/" }, () => { replied = true; }), false);
   await wait(10);
   assert.strictEqual(replied, false);
   assert.strictEqual(t.store.token, "t");

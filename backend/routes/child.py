@@ -10,7 +10,7 @@ from policy.categories import Action
 from policy.decision import Level
 from policy.engine import decide
 from services import ai_service, event_service, policy_service, site_service, space_service
-from services.auth_service import device_required, err, verify_password
+from services.auth_service import device_required, err, redeem_disconnect_code, verify_password
 from services.ratelimit import limiter, rate_limit
 
 # Everything under /api/ext is called by the browser extension and is authenticated by its device token, not by a login.
@@ -43,15 +43,20 @@ def _needs_ai(site_info, decision, cfg) -> bool:
 @rate_limit("disconnect", 5, 600, key_fn=lambda: f"dev{g.device.id}")
 def disconnect():
     """The browser asks to leave its account. An adult protecting themselves just confirms; on a family
-    account the browser belongs to a child, so the parent's password is needed (otherwise the child could
-    simply switch the protection off). Either way the device is revoked here, so the dashboard shows it gone."""
+    account the browser belongs to a child, so a parent has to agree (otherwise the child could simply switch the
+    protection off): a one-time disconnect code from the dashboard, or the parent's password. The popup's one field
+    takes either and sends it as `code`; older extensions send `password`. Either way the device is revoked here, so
+    the dashboard shows it gone."""
     body = request.get_json(silent=True) or {}
     parent = g.device.child.parent
     if space_service.mode_of_child(g.device.child) == "family":
-        password = str(body.get("password", ""))
-        if len(password) > MAX_PASSWORD or not verify_password(password, parent.password_hash):
+        code = str(body.get("code", ""))[:MAX_PASSWORD]
+        password = str(body.get("password", "")) or code
+        if not redeem_disconnect_code(g.device, code) and \
+                (len(password) > MAX_PASSWORD or not verify_password(password, parent.password_hash)):
+            db.session.commit()                       # an expired code is cleared
             log.warning("failed disconnect attempt device=%s", g.device.id)
-            return err("That isn't the parent's password.", 403)
+            return err("That isn't a current disconnect code from the parent's dashboard.", 403)
     g.device.revoked = True
     g.device.token_hash = None
     g.device.pairing_code_hash = None

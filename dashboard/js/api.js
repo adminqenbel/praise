@@ -35,6 +35,7 @@ const Api = (() => {
 
   return {
     ApiError,
+    base,   // pages navigate here for Google sign-in (a full page visit, not a fetch)
     get: (p) => request("GET", p),
     post: (p, b) => request("POST", p, b === undefined ? {} : b),
     put: (p, b) => request("PUT", p, b),

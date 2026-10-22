@@ -45,7 +45,8 @@ Free-tier projects pause after about a week without activity; move to a paid pla
 2. Environment > Add from .env: every `envVars` key in `render.yaml`. Secrets: `DATABASE_URL` (transaction pooler,
    `?sslmode=require`, `@` in the password written `%40`), `GEMINI_API_KEY` (a new key, not the one used in local
    development) and `SECRET_KEY` (a fresh `python -c "import secrets; print(secrets.token_urlsafe(48))"`). Keep the
-   file you paste from out of git (`render.env` is ignored).
+   file you paste from out of git (`render.env` is ignored). Google sign-in adds `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET` and `API_ORIGIN=https://api.praise.qenbel.site` (section 2a).
 3. Settings > Custom Domains: `api.praise.qenbel.site`; add the CNAME it shows at your DNS provider.
 4. Check: `https://api.praise.qenbel.site/health` answers `{"status":"ok"}`. If the deploy log says
    "Refusing to start in production", it names the setting to fix.
@@ -60,6 +61,22 @@ monthly hours. Move to a paid instance before the beta grows.
 
 One gunicorn worker with 8 threads on purpose: the rate limiter and the AI budget live in that process. Before adding
 workers or instances, move them to shared storage (roadmap A).
+
+## 2a. Google sign-in
+
+1. Google Cloud Console > APIs & Services > OAuth consent screen: app name Praise, home page
+   `https://app.praise.qenbel.site`, authorized domain `qenbel.site`, scopes `openid`, `email`, `profile` only. While it is
+   in "Testing", only the listed test users can sign in; publishing needs a privacy-policy URL.
+2. Credentials > Create OAuth client ID > Web application. Authorized redirect URIs:
+   `https://api.praise.qenbel.site/api/auth/google/callback` and, for development,
+   `http://localhost:5000/api/auth/google/callback`.
+3. Render: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `API_ORIGIN=https://api.praise.qenbel.site`. With a client id set,
+   the API refuses to start without the secret or with a non-https `API_ORIGIN`.
+
+Rules the code keeps: a login is found by Google's `sub`, never by email; a new Google login whose email already has an
+account is refused (that owner signs in with the password and uses "Connect Google"), so nobody can pre-register an
+address and wait for its owner; an unverified Google email cannot open an account. A child's browser leaves its account
+with a one-time code from the Children page, which works for parents without a password.
 
 ## 3. Vercel (dashboard)
 

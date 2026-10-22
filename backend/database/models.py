@@ -32,7 +32,7 @@ class User(db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column(db.String(255))   # None for a login that only signs in with Google
     role = db.Column(db.String(16), nullable=False, default="parent")
     # The space the dashboard is showing (family | adult). One login can hold both: see services/space_service.py.
     account_type = db.Column(db.String(8), nullable=False, default="family")
@@ -43,6 +43,23 @@ class User(db.Model):
     children = db.relationship("Child", back_populates="parent", cascade="all, delete-orphan")
     __table_args__ = (CheckConstraint("role in ('parent','admin')", name="ck_users_role"),
                       CheckConstraint("account_type in ('family','adult')", name="ck_users_account_type"))
+
+
+# A sign-in through another provider (Google) attached to a login. `subject` is the provider's permanent account id:
+# logins are found by it, never by email, because an address can change hands.
+class OAuthIdentity(db.Model):
+    __tablename__ = "oauth_identities"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = db.Column(db.String(16), nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255))   # as the provider last reported it; informational only
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    last_used_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+    __table_args__ = (UniqueConstraint("provider", "subject", name="uq_oauth_provider_subject"),
+                      CheckConstraint("provider in ('google')", name="ck_oauth_provider"))
 
 
 # A named rule set (a preset plus the owner's changes). Its rows below say what is allowed, blocked or asked about.
@@ -99,6 +116,9 @@ class Device(db.Model):
     paired_at = db.Column(db.DateTime(timezone=True))
     last_seen = db.Column(db.DateTime(timezone=True))
     revoked = db.Column(db.Boolean, nullable=False, default=False)
+    # A child's browser leaves the account only with a one-time code from the parent's dashboard (hash and expiry).
+    disconnect_code_hash = db.Column(db.String(64))
+    disconnect_expires_at = db.Column(db.DateTime(timezone=True))
 
     child = db.relationship("Child", back_populates="devices")
 

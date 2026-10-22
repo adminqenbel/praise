@@ -49,8 +49,8 @@ cookie values, page paths and query strings, and the password fingerprints used 
 - A hostile page can show our own dialog repeatedly or cover it, but it cannot click the buttons, and
   the held form stays held.
 - Anyone using your browser profile can pause or change a personal Praise. It protects you; it is not
-  a lock against someone with access to your computer. A family browser cannot pause itself and can only be disconnected with the
-  parent's password, but a child who can open `chrome://extensions` can still remove the extension unless it is force-installed by
+  a lock against someone with access to your computer. A family browser cannot pause itself and can only be disconnected with a
+  parent's one-time code, but a child who can open `chrome://extensions` can still remove the extension unless it is force-installed by
   a managed browser policy.
 - The mode (family or personal) is stored in the extension's own storage and refreshed from the server on every sync. Someone
   with developer tools on the extension could change it locally, which is the same limit as removing the extension.
