@@ -5,6 +5,8 @@ browser, Praise Shield) at the same time. `User.account_type` is the space the d
 `has_family` / `has_adult` flags say which spaces exist. Everything that belongs to a space is told apart by the profile's
 kind (a child's profile is "child", the person's own is "self") and by the rule set's `space`, so the spaces never mix.
 """
+from flask import has_request_context, request
+
 from database.models import Child
 from database.postgres import db
 from services import policy_service
@@ -21,8 +23,13 @@ def enabled(user) -> list[str]:
 
 
 def active(user) -> str:
-    """The space the dashboard is showing: the last one chosen, as long as it still exists."""
-    return user.account_type if user.account_type in enabled(user) else enabled(user)[0]
+    """The space the dashboard is showing. A request may name one of the login's own spaces (?space=), so each browser
+    tab and the dashboard's prefetching read the space they mean; otherwise the last one chosen, as long as it still exists."""
+    have = enabled(user)
+    asked = request.args.get("space") if has_request_context() else None
+    if asked in have:
+        return asked
+    return user.account_type if user.account_type in have else have[0]
 
 
 # Kind of profile that new people are created as in the space being shown.

@@ -97,6 +97,15 @@ def test_cors_only_allows_the_dashboard_origin(limited_app):
     assert "Access-Control-Allow-Origin" not in evil.headers
 
 
+def test_the_browser_may_remember_the_cors_permission_check(limited_app):
+    pre = limited_app.test_client().options("/api/children", headers={
+        "Origin": limited_app.config["DASHBOARD_ORIGIN"], "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type,x-csrf-token"})
+    assert pre.status_code == 200 and pre.headers["Access-Control-Max-Age"] == "7200"
+    assert pre.headers["Access-Control-Allow-Origin"] == limited_app.config["DASHBOARD_ORIGIN"]
+    assert "x-csrf-token" in pre.headers["Access-Control-Allow-Headers"].lower()
+
+
 def test_session_cookie_flags(limited_app):
     r = limited_app.test_client().post("/api/auth/register",
                                        json={"email": "c@x.com", "password": "password123"})

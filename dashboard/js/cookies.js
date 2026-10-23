@@ -29,7 +29,7 @@ Praise.start("cookies.html", async (main, { user }) => {
       h("header", null, h("h2", null, "Last 30 days"), h("p", null, `${plural(t.cookies_blocked, "cookie")} removed, ${plural(t.trackers_blocked, "tracker")} of them. Change what's removed on the `, h("a", { href: "policies.html" }, "Rules"), " page.")),
       purposes.length ? h("div", { class: "chart-box" }, canvas) : emptyState("No cookies recorded", "Cookies appear once a connected browser visits sites with cookie watching turned on.")));
     if (purposes.length) drawChart(canvas, { type: "bar",
-      data: { labels: purposes.map(([p]) => p), datasets: [{ data: purposes.map(([, n]) => n), backgroundColor: "#8b5cf6", borderRadius: 4 }] },
+      data: { labels: purposes.map(([p]) => p), datasets: [{ data: purposes.map(([, n]) => n), backgroundColor: themeVar("--chart-1"), borderRadius: 4 }] },
       options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
 
     const nameOf = (id) => (children.find((c) => c.id === id) || {}).name || "—";

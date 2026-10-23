@@ -16,7 +16,7 @@ if (typeof Api !== "undefined") Api.warm();
   BUDDIES.forEach(({ who, host, intro, mood }, i) => {
     const slot = document.getElementById(host);
     if (!slot || !self.PraiseBuddy) return;
-    const buddy = PraiseBuddy.mount(slot, { who, base: "img/", height: 112, side: true, sleeps: true });
+    const buddy = PraiseBuddy.mount(slot, { who, height: 104, side: true, sleeps: true });
     const card = slot.closest(".path");
     let taps = 0;
 

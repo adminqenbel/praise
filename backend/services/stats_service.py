@@ -90,6 +90,7 @@ def dashboard_stats(child_ids, days=7):
             "cookies_blocked": _count(cookies_blocked),
         },
         "blocked_by_category": _group(blocked, _field("decision", "category")),
+        "blocked_by_child": _group(blocked, Event.child_id),     # lets the home page draw every door from one call
         "downloads_by_kind": _group(downloads_blocked, _field("kind")),
         "security_by_type": _group(security, _field("type")),
         "cookies_by_purpose": _group(cookies, _field("purpose")),

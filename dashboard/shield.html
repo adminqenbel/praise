@@ -6,7 +6,8 @@
   <title>Praise Shield: protection that speaks up only when it matters</title>
   <meta name="description" content="Praise Shield warns you about scams and fake bank pages, keeps trackers out, and pauses a form before sensitive data goes somewhere risky.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://api.praise.qenbel.site http://localhost:5000; base-uri 'none'; form-action 'none'">
-  <link rel="stylesheet" href="css/shield.css?v=b3">
+  <link rel="stylesheet" href="css/shield.css?v=b4">
+  <script src="js/theme.js?v=b4"></script>
 </head>
 <body class="shield-site">
   <header class="sh-bar">
@@ -58,8 +59,8 @@
       <table class="sh-table">
         <thead><tr><th scope="col">What</th><th scope="col">Where it goes</th><th scope="col">When</th></tr></thead>
         <tbody>
-          <tr><td>The address of a site you open (never the path or query)</td><td>Your own Praise server, and its AI model</td><td>Only for sites without a saved verdict</td></tr>
-          <tr><td>That a warning was shown, and the kind of data involved</td><td>Your own Praise server</td><td>After each warning</td></tr>
+          <tr><td>The address of a site you open (never the path or query)</td><td>Praise's server, and its AI model</td><td>Only for sites without a saved verdict</td></tr>
+          <tr><td>That a warning was shown, and the kind of data involved</td><td>Praise's server</td><td>After each warning</td></tr>
           <tr><td>The first 5 characters of a scrambled copy of a password</td><td>Have I Been Pwned</td><td>When breach checking is on</td></tr>
         </tbody>
       </table>
@@ -105,8 +106,8 @@
     <a href="home.html">Sign in</a>
   </footer>
 
-  <script src="js/ring.js?v=b3"></script>
-  <script src="js/api.js?v=b3"></script>
-  <script src="js/shield-landing.js?v=b3"></script>
+  <script src="js/ring.js?v=b4"></script>
+  <script src="js/api.js?v=b4"></script>
+  <script src="js/shield-landing.js?v=b4"></script>
 </body>
 </html>

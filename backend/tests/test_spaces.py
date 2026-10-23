@@ -105,6 +105,30 @@ def test_the_space_you_were_in_is_remembered_at_the_next_sign_in(app):
     assert me(again)["account_type"] == "family"
 
 
+def test_a_request_can_name_the_space_it_means_without_switching(app):
+    c, h = family(app, "both2@x.com")
+    mia = c.post("/api/children", json={"name": "Mia"}, headers=h).get_json()["id"]
+    switch(c, h, "adult", enable=True)                                   # the saved choice is now the personal space
+    names = lambda q: [k["name"] for k in c.get("/api/children" + q).get_json()["children"]]
+    assert names("") == ["Me"]
+    assert names("?space=family") == ["Mia"]                            # a tab (or a prefetch) that means the family space
+    assert names("?space=adult") == ["Me"]
+    assert c.get("/api/stats?space=family").status_code == 200
+    assert c.get(f"/api/stats?child_id={mia}&space=family").status_code == 200
+    assert c.get(f"/api/stats?child_id={mia}&space=adult").status_code == 404
+    assert me(c)["account_type"] == "adult"                              # nothing was switched or saved
+    assert c.get("/api/auth/me?space=family").get_json()["user"]["account_type"] == "family"
+    assert [p["name"] for p in c.get("/api/policies?space=family").get_json()["policies"]] == []
+
+
+def test_a_request_cannot_name_a_space_the_login_does_not_have(app):
+    c, h = family(app, "one@x.com")
+    c.post("/api/children", json={"name": "Mia"}, headers=h)
+    assert [k["name"] for k in c.get("/api/children?space=adult").get_json()["children"]] == ["Mia"]
+    assert [k["name"] for k in c.get("/api/children?space=nonsense").get_json()["children"]] == ["Mia"]
+    assert me(c)["spaces"] == ["family"]                                 # asking never creates a space
+
+
 def test_a_browser_becomes_the_version_of_the_profile_it_was_paired_to_even_on_one_login(app):
     c, h = family(app)
     mia = c.post("/api/children", json={"name": "Mia"}, headers=h).get_json()["id"]

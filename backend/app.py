@@ -45,7 +45,8 @@ def create_app(config_class=Config):
         return resp
 
     # Only the dashboard's origin may call the API from a browser, and only it may send the session cookie.
-    CORS(app, supports_credentials=True, origins=[app.config["DASHBOARD_ORIGIN"]])
+    # `max_age` lets the browser remember the permission check it makes before each write, instead of asking every time.
+    CORS(app, supports_credentials=True, origins=[app.config["DASHBOARD_ORIGIN"]], max_age=7200)
     # PostgreSQL holds everything: accounts, rules, site intelligence, events and AI evidence.
     db.init_app(app)
     migrate.init_app(app, db)

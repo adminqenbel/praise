@@ -226,6 +226,7 @@ def test_stats_and_events_scoped_to_own_children(app):
     assert t["checks"] == 1 and t["blocked"] == 1 and t["ai_classifications"] == 1
     assert t["downloads_blocked"] == 1 and t["trackers_blocked"] == 1 and t["access_requests"] == 1
     assert s["blocked_by_category"] == {"gambling": 1}
+    assert s["blocked_by_child"] == {str(cid): 1}                         # the home page's per-child counts, from one call
     assert s["downloads_by_kind"] == {"executable": 1}
     assert s["security_by_type"] == {"external_browser": 1}
     assert len(s["blocked_per_day"]) == 1

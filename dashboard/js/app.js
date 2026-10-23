@@ -135,28 +135,95 @@ function childSelect(children, current, onChange, allLabel = "All children") {
   return sel;
 }
 
-// Draw a Chart.js chart, or explain politely if the Chart.js script could not load (it comes from a CDN).
+// A colour from the page's current theme (so charts follow the family look, or the personal one in light or dark).
+const themeVar = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
+
+// Draw a Chart.js chart. Chart.js loads on first use (it is a big script); if it can't, say so instead of leaving a hole.
+let chartLoad = null;
 function drawChart(canvas, config) {
   if (typeof Chart === "undefined") {
-    canvas.replaceWith(h("p", { class: "muted" }, "Charts need an internet connection to load."));
+    chartLoad = chartLoad || loadScript(CHART_SRC);
+    const sorry = () => canvas.replaceWith(h("p", { class: "muted" }, "The chart couldn't load. Check your connection and reload."));
+    chartLoad.then(() => (typeof Chart === "undefined" ? sorry() : drawChart(canvas, config)), sorry);
     return;
   }
-  Chart.defaults.font.family = '"Segoe UI", system-ui, sans-serif';
-  Chart.defaults.color = "#5d5470";
+  Chart.defaults.font.family = themeVar("--body") || '"Segoe UI", system-ui, sans-serif';
+  Chart.defaults.color = themeVar("--text2") || "#5d5470";
+  Chart.defaults.borderColor = themeVar("--line") || "rgba(0,0,0,.1)";
   new Chart(canvas, config);
 }
 
 // ---- navigation ---------------------------------------------------------------------------
-// Navigation links for the family dashboard and for the adult one.
+// Line icons for the navigation (24 px grid, drawn in the text colour).
+const ICONS = {
+  home: '<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-5.5H9V20H5a1 1 0 0 1-1-1z"/>',
+  children: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9.5" r="2.4"/><path d="M17 14.2c2.4.2 4.5 2.1 4.5 5.1"/>',
+  rules: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  shield: '<path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.2 10"/>',
+  activity: '<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>',
+  sites: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  cookies: '<path d="M12 3a9 9 0 1 0 9 9 4 4 0 0 1-4-4 4 4 0 0 1-5-5z"/><circle cx="9" cy="10" r=".6"/><circle cx="12.5" cy="14.5" r=".6"/><circle cx="8.5" cy="14.5" r=".6"/>',
+  browsers: '<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/>',
+  review: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9.5 4V3h5v1M9 13l2 2 4-4"/>',
+  more: '<circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>',
+  out: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h11"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+};
+const icon = (name) => svg(`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`);
+
+// [page, label, icon] for the family dashboard and for the adult one.
 const NAV = [
-  ["home.html", "Home"], ["children.html", "Children"], ["policies.html", "Rules"],
-  ["events.html", "Activity"], ["sites.html", "Sites"], ["cookies.html", "Cookies"],
+  ["home.html", "Home", "home"], ["children.html", "Children", "children"], ["policies.html", "Rules", "rules"],
+  ["events.html", "Activity", "activity"], ["sites.html", "Sites", "sites"], ["cookies.html", "Cookies", "cookies"],
 ];
 
 const NAV_ADULT = [
-  ["home.html", "Home"], ["policies.html", "My protection"], ["events.html", "Activity"],
-  ["cookies.html", "Cookies"], ["sites.html", "Sites"], ["children.html", "My browsers"],
+  ["home.html", "Home", "home"], ["policies.html", "My protection", "shield"], ["events.html", "Activity", "activity"],
+  ["cookies.html", "Cookies", "cookies"], ["sites.html", "Sites", "sites"], ["children.html", "My browsers", "browsers"],
 ];
+
+// The phone's tab bar has room for four pages and a More button; the rest wait behind it.
+const TABS_PRIMARY = { family: ["home.html", "children.html", "policies.html", "events.html"],
+                       adult: ["home.html", "policies.html", "events.html", "children.html"] };
+
+// ---- light and dark (personal space only: red and white by day, red and black by night) ------------------------------
+// js/theme.js applies a saved choice before the page paints; with none, the device's setting decides.
+const MODE_KEY = "praise.mode";
+const effectiveMode = () => document.documentElement.dataset.mode ||
+  (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+// Colour of the phone's browser bar, from the page's own --chrome variable.
+function syncThemeColor() {
+  let meta = document.querySelector("meta[name=theme-color]");
+  if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.append(meta); }
+  const c = getComputedStyle(document.body).getPropertyValue("--chrome").trim();
+  if (c) meta.content = c;
+}
+
+function setMode(mode) {
+  document.documentElement.dataset.mode = mode;
+  try { localStorage.setItem(MODE_KEY, mode); } catch (e) { /* private window: the choice lasts until the tab closes */ }
+  syncThemeColor();
+}
+
+// A button that flips between the light and dark look; its icon and name always say what it will do next.
+function modeButton() {
+  const btn = h("button", { type: "button", class: "quiet mode" });
+  btn.repaint = () => {
+    const dark = effectiveMode() === "dark";
+    btn.replaceChildren(icon(dark ? "sun" : "moon"), h("span", null, dark ? "Light theme" : "Dark theme"));
+    btn.setAttribute("aria-label", dark ? "Switch to the light theme" : "Switch to the dark theme");
+  };
+  btn.addEventListener("click", () => {
+    setMode(effectiveMode() === "dark" ? "light" : "dark");
+    document.querySelectorAll("button.mode").forEach((b) => b.repaint());
+    setTimeout(() => Praise.refresh(), 60);                       // charts take their colours when drawn
+  });
+  btn.repaint();
+  return btn;
+}
 
 // ---- spaces: one login, a family and a personal version ----------------------------------------------------------------
 // The switch sits in every dashboard. A space the login doesn't have yet reads "+ Just me" / "+ Family" and asks before it
@@ -189,12 +256,25 @@ function confirmAddSpace(space) {
   });
 }
 
-// Switch between the family and personal spaces; the server records the choice and the whole shell is rebuilt in the other look.
+// Switch between the family and personal spaces. A space the login already has switches at once: the other look is built
+// from what this tab already fetched, and the server hears about the choice in the background. Adding a space waits for
+// the server, because it has to exist before anything can be read from it.
 async function changeSpace(space, exists) {
   if (!exists && !(await confirmAddSpace(space))) return;
+  const live = Praise.live;
+  if (!live) return;
   try {
-    await Api.post("/api/auth/space", exists ? { space } : { space, enable: true });
-    await Praise.reboot("home.html");               // rebuild the shell in the other look, without reloading the page
+    if (exists) {
+      const me = { user: { ...live.user, account_type: space }, google_enabled: live.google };
+      Api.saveMe({ ...Api.savedMe(), user: me.user });
+      Praise.swap(me, "home.html");
+      Api.post("/api/auth/space", { space }).catch(() => toast("Couldn't save that choice. This tab keeps showing it.", true));
+    } else {
+      const out = await Api.post("/api/auth/space", { space, enable: true });
+      const me = { user: out.user, csrf: out.csrf, google_enabled: live.google };
+      Api.saveMe({ ...Api.savedMe(), ...me });
+      Praise.swap(me, "home.html");
+    }
   } catch (e) { toast(e.message || "Couldn't switch. Try again.", true); }
 }
 
@@ -212,26 +292,58 @@ function spaceSwitch(user) {
   return h("div", { class: "spaces", role: "group", "aria-label": "Switch between your family and personal spaces" }, btn("family"), btn("adult"));
 }
 
-// Build the top bar (brand, space switch, links, sign out) and the empty content area. Admins also get the Review queue link.
-// A login without Google gets "Connect Google" when the server has Google sign-in set up.
-function buildShell(user, page, logout, googleOn) {
+// The pages for this account, in menu order. Admins also get the Review queue.
+function navFor(user) {
   const links = (user.account_type === "adult" ? NAV_ADULT : NAV).slice();
-  if (user.role === "admin") links.push(["reviews.html", "Review queue"]);
+  if (user.role === "admin") links.push(["reviews.html", "Review queue", "review"]);
+  return links;
+}
+
+// Build the shell: the top bar (a sidebar in the personal space), the content area, the phone's tab bar and its More sheet.
+// A login without Google gets "Connect Google" when the server has Google sign-in set up.
+function buildShell(user, page, { logout, googleOn }) {
+  const adult = user.account_type === "adult";
+  const links = navFor(user);
+  const primary = TABS_PRIMARY[adult ? "adult" : "family"];
+  const link = ([href, label, ic]) => h("a", { href, "aria-current": href === page ? "page" : false }, icon(ic), h("span", null, label));
+
+  // Sign out, connect Google and the theme switch appear in the top bar on a computer and in the More sheet on a phone.
+  const actions = () => [
+    adult ? modeButton() : null,
+    googleOn && !user.google
+      ? h("button", { type: "button", class: "quiet", onclick: () => { location.href = googleUrl({ link: 1, next: page }); } }, icon("link"), h("span", null, "Connect Google")) : null,
+    h("button", { type: "button", class: "quiet signout", onclick: logout }, icon("out"), h("span", null, "Sign out")),
+  ];
+
   const bar = h("header", { class: "topbar" },
     h("a", { class: "brand", href: "home.html" },
-      user.account_type === "adult"
-        ? svg(`<svg viewBox="0 0 200 200" fill="none" stroke-width="26" stroke-linecap="round" aria-hidden="true"><path d="M 28 62 A 80 80 0 0 1 82 21" stroke="#0e7c7b"/><path d="M 135 21 A 80 80 0 0 1 179 62" stroke="#0e7c7b"/><path d="M 179 138 A 80 80 0 0 1 138 179" stroke="#0e7c7b"/><path d="M 62 179 A 80 80 0 0 1 21 138" stroke="#0e7c7b"/></svg>`)
-        : svg(`<svg viewBox="0 0 24 30" aria-hidden="true"><path fill="#8b5cf6" d="M2 30V12C2 5 7 1 12 1s10 4 10 11v18z"/><circle cx="16.5" cy="19" r="2.4" fill="#ffb627"/></svg>`),
-      user.account_type === "adult" ? "Praise Shield" : "Praise"),
+      adult
+        ? svg(`<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round" aria-hidden="true"><path d="M 28 62 A 80 80 0 0 1 82 21"/><path d="M 135 21 A 80 80 0 0 1 179 62"/><path d="M 179 138 A 80 80 0 0 1 138 179"/><path d="M 62 179 A 80 80 0 0 1 21 138"/></svg>`)
+        : svg(`<svg viewBox="0 0 24 30" aria-hidden="true"><path fill="#6d44e0" d="M2 30V12C2 5 7 1 12 1s10 4 10 11v18z"/><circle cx="16.5" cy="19" r="2.4" fill="#ffb627"/></svg>`),
+      h("span", null, adult ? "Praise Shield" : "Praise")),
     spaceSwitch(user),
-    h("nav", { "aria-label": "Main" }, links.map(([href, label]) =>
-      h("a", { href, "aria-current": href === page ? "page" : false }, label))),
-    h("div", { class: "who" }, h("span", { class: "email" }, user.email),
-      googleOn && !user.google
-        ? h("button", { onclick: () => { location.href = googleUrl({ link: 1, next: page }); } }, "Connect Google") : null,
-      h("button", { onclick: logout }, "Sign out")));
+    h("nav", { "aria-label": "Main" }, links.map(link)),
+    h("div", { class: "who" }, h("span", { class: "email" }, user.email), actions()));
+
   const main = h("main", { class: "main", id: "main" });
-  return { shell: h("div", { class: "shell" }, bar, main), main };
+
+  // Phone: four tabs and More.
+  const tabLinks = links.filter(([href]) => primary.includes(href));
+  const rest = links.filter(([href]) => !primary.includes(href));
+  const sheet = h("div", { class: "sheet-back", hidden: true, onclick: (e) => { if (e.target === sheet) closeSheet(); } },
+    h("div", { class: "sheet", role: "dialog", "aria-modal": "true", "aria-label": "More" },
+      h("p", { class: "sheet-who" }, user.email),
+      h("nav", { "aria-label": "More pages" }, rest.map(link)),
+      h("div", { class: "sheet-actions" }, actions())));
+  const more = h("button", { type: "button", class: "tab more", "aria-haspopup": "dialog", onclick: () => openSheet() }, icon("more"), h("span", null, "More"));
+  const tabbar = h("nav", { class: "tabbar", "aria-label": "Main" },
+    tabLinks.map(([href, label, ic]) => h("a", { class: "tab", href, "aria-current": href === page ? "page" : false }, icon(ic), h("span", null, label))), more);
+  function openSheet() { sheet.hidden = false; sheet.querySelector("a, button").focus(); document.addEventListener("keydown", onKey, true); }
+  function closeSheet() { sheet.hidden = true; document.removeEventListener("keydown", onKey, true); more.focus(); }
+  function onKey(e) { if (e.key === "Escape") { e.preventDefault(); closeSheet(); } }
+  sheet.addEventListener("click", (e) => { if (e.target.closest("a")) { sheet.hidden = true; document.removeEventListener("keydown", onKey, true); } });
+
+  return { el: h("div", { class: "shell" }, bar, main, tabbar, sheet), bar, main, more, sheet };
 }
 
 // The "Praise" mark with its two dots, linking back to the landing hub.
@@ -374,6 +486,12 @@ function authScreen(onDone) {
 // or sidebar) on screen. After that, moving between pages does not reload anything: the shell stays where it is and only the
 // page's content is swapped, so the tabs feel instant and nothing flashes. A page that wants to clean up when it is left
 // (stop a timer, remove a mascot) calls Praise.onLeave(fn) while it renders.
+//
+// Three things keep it quick even though the server is far away and may be asleep:
+//   - reads are cached (api.js), and the pages' first reads are fetched in the background once the shell is up, for the
+//     other space too, so a click shows its page from memory;
+//   - a tab that has seen the account before paints the shell from the copy it kept and checks in the background;
+//   - a page that has to wait shows a placeholder at once instead of a blank.
 
 // Which script(s) draw each page, so a page can be brought in the first time it is opened. `chart` pages need Chart.js.
 const PAGE_SPECS = {
@@ -386,6 +504,13 @@ const PAGE_SPECS = {
   "reviews.html": { scripts: ["js/reviews.js"] },
 };
 const CHART_SRC = "vendor/chart.umd.js";   // Chart.js 4.4.1, vendored: the CSP allows scripts from this site only
+
+// What each space's pages read first. These must be spelled exactly as the pages ask for them, or the copy isn't found.
+const PREFETCH = {
+  family: ["/api/children", "/api/policies", "/api/stats?days=7", "/api/events?kind=browser&type=access_request&limit=20",
+    "/api/events?kind=browser&limit=100", "/api/events?kind=browser&limit=50", "/api/meta/categories", "/api/sites?limit=100"],
+  adult: ["/api/children", "/api/policies", "/api/stats?days=7", "/api/events?kind=security&limit=100", "/api/meta/categories", "/api/sites?limit=100"],
+};
 const pageFile = (url) => new URL(url, location.href).pathname.split("/").pop();
 
 // Load a stylesheet once; a missing file does not stop the page.
@@ -394,7 +519,7 @@ function loadStyle(href) {
   if (have) return Promise.resolve();
   return new Promise((resolve) => {
     const l = document.createElement("link");
-    l.rel = "stylesheet"; l.href = href + "?v=b3";
+    l.rel = "stylesheet"; l.href = href + "?v=b4";
     l.onload = l.onerror = resolve;                               // a missing stylesheet must not stop the page
     document.head.append(l);
   });
@@ -406,16 +531,40 @@ function loadScript(src) {
   if (have) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = src.startsWith("http") ? src : src + "?v=b3";
+    s.src = src.startsWith("http") ? src : src + "?v=b4";
     s.onload = resolve;
     s.onerror = () => reject(new Error("Couldn't load " + src));
     document.head.append(s);
   });
 }
 
+// Everything a page needs to draw, loaded (scripts register their page with Praise.start; that doesn't show it unless it is the target).
+async function loadPage(file) {
+  const spec = PAGE_SPECS[file];
+  for (const css of spec.styles || []) await loadStyle(css);
+  if (spec.chart && typeof Chart === "undefined") { try { await loadScript(CHART_SRC); } catch (e) { /* charts say so themselves */ } }
+  for (const s of spec.scripts) await loadScript(s);
+}
+
+// Grey shapes that stand in for a page while its data is on the way. They appear only if the wait is noticeable (css).
+function skeleton() {
+  return h("div", { class: "skeleton", "aria-hidden": "true" },
+    h("i", { class: "sk sk-title" }), h("i", { class: "sk sk-line" }),
+    h("i", { class: "sk sk-block" }), h("i", { class: "sk sk-block" }), h("i", { class: "sk sk-block short" }));
+}
+
+// On a phone a table becomes a stack of cards, each value labelled by its column; the label comes from the header text.
+function labelTables(root) {
+  for (const t of root.querySelectorAll("table")) {
+    const heads = [...t.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+    if (!heads.length) continue;
+    for (const tr of t.querySelectorAll("tbody tr")) [...tr.children].forEach((td, i) => { if (!td.dataset.label && heads[i]) td.dataset.label = heads[i]; });
+  }
+}
+
 // The dashboard's page manager: shows the shell, swaps page content without reloading, and runs each page's cleanup when it is left.
 const Praise = {
-  live: null,          // { user, bar, main, page, leave: [] } while the shell is on screen
+  live: null,          // { user, google, shell, bar, main, page, leave: [], busy } while the shell is on screen
   pages: {},           // page -> { render, opts }, filled as each page's script runs
   target: null,        // the page being navigated to (a slow script load can't overrule a newer click)
 
@@ -431,11 +580,19 @@ const Praise = {
     this.target = page;
     document.body.replaceChildren();
     document.documentElement.dataset.theme = "neutral";          // until we know which version this account is
+    const saved = Api.savedMe();
+    if (saved && saved.user) {                                    // this tab has seen the account: paint now, confirm in the background
+      Api.useMe(saved);
+      const shown = this.mount(saved, page);
+      this.verify(saved);
+      await shown;
+      return;
+    }
     let me;
     // A quick answer shows nothing extra; a slow one (a sleeping server) shows the waiting screen after a second.
     const wait = waitScreen();
     const late = setTimeout(() => document.body.replaceChildren(wait.el), 1000);
-    try { me = await Api.patient("/api/auth/me"); }
+    try { me = await Api.whoAmI(); }
     catch (e) {
       if (e.status !== 401) {
         document.body.replaceChildren(e.status ? h("p", { class: "err", style: "padding:2rem" }, e.message) : waitFailed());
@@ -444,18 +601,58 @@ const Praise = {
     } finally { clearTimeout(late); wait.stop(); }
     document.body.replaceChildren();
     if (!me) { document.body.append(authScreen(() => Praise.start(page, render, opts))); return; }
+    await this.mount(me, page);
+  },
 
+  // Build the shell for this account and show `page` in it.
+  async mount(me, page) {
     const user = me.user;
+    Api.setSpace(user.account_type);
     document.documentElement.dataset.theme = user.account_type === "adult" ? "adult" : "family";
-    const { shell, main } = buildShell(user, page, async () => {
-      await Api.post("/api/auth/logout"); location.href = "index.html";
-    }, me.google_enabled);
-    document.body.append(shell);
+    document.body.replaceChildren();
+    const built = buildShell(user, page, {
+      logout: async () => { try { await Api.post("/api/auth/logout"); } finally { Api.reset(); location.href = "index.html"; } },
+      googleOn: me.google_enabled,
+    });
+    document.body.append(built.el);
+    syncThemeColor();
     const googleError = takeGoogleError();                       // from "Connect Google"
     if (googleError) toast(googleError, true);
-    this.live = { user, bar: shell.querySelector(".topbar"), main, page, leave: [] };
+    this.live = { user, google: me.google_enabled, shell: built.el, bar: built.bar, main: built.main, page, leave: [], busy: false, refreshing: null, watcher: null };
     this.title(page);
+    this.warm(user);
+    if (!this.pages[page]) {                                      // its script isn't here yet: it shows itself when it arrives
+      built.main.classList.add("is-loading");
+      built.main.append(skeleton());
+      loadPage(page).catch(() => { location.href = page; });
+      return;
+    }
     await this.run(page);
+  },
+
+  // Check in the background that the copy this tab kept is still right: still signed in, same spaces, same details.
+  async verify(saved) {
+    try {
+      const me = await Api.whoAmI();
+      const same = (a, b) => JSON.stringify([a.user, a.google_enabled]) === JSON.stringify([b.user, b.google_enabled]);
+      // Which space this tab shows is its own business (a switch in another tab saved a different one).
+      const mine = this.live && this.live.user.account_type;
+      if (mine) Api.setSpace(mine);
+      const fresh = mine ? { ...me, user: { ...me.user, account_type: mine } } : me;
+      if (this.live && !same(fresh, { user: this.live.user, google_enabled: this.live.google })) this.swap(fresh, this.live.page);
+      Api.saveMe({ ...me, user: fresh.user });
+    } catch (e) { if (e.status === 401) this.signedOut(); }
+  },
+
+  // The session has ended: show the sign-in form, and come back to this page after it.
+  signedOut() {
+    const page = this.live ? this.live.page : this.target;
+    if (this.live) for (const fn of this.live.leave.splice(0)) { try { fn(); } catch (e) { /* ignore */ } }
+    this.live = null;
+    Api.reset();
+    const entry = this.pages[page];
+    document.documentElement.dataset.theme = "neutral";
+    document.body.replaceChildren(authScreen(() => entry ? Praise.start(page, entry.render, entry.opts) : location.reload()));
   },
 
   title(page) {
@@ -465,60 +662,144 @@ const Praise = {
     document.title = (link ? link.textContent + " - " : "") + brand;
   },
 
-  // Run a page's render function; administrator-only pages are refused for everyone else, and errors are shown instead of a blank screen.
+  // Fetch in the background what the other pages will ask for, and the other space's too, once the browser is idle.
+  warm(user) {
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+    const mine = user.account_type, other = (user.spaces || []).find((s) => s !== mine);
+    idle(async () => {
+      await Api.prefetch(PREFETCH[mine], { space: mine });
+      for (const file of Object.keys(PAGE_SPECS)) {
+        if (this.pages[file] || (file === "reviews.html" && user.role !== "admin")) continue;
+        try { await loadPage(file); } catch (e) { /* loaded when it is opened */ }
+      }
+      if (other) await Api.prefetch(PREFETCH[other], { space: other });
+    }, { timeout: 3000 });
+  },
+
+  // Run a page's render function. The page draws into the content area while a placeholder stands in for it, then the
+  // placeholder goes and the page appears all at once. Administrator-only pages are refused for everyone else, and errors are
+  // shown instead of a blank screen.
   async run(page) {
     const live = this.live, main = live.main, { render, opts } = this.pages[page];
     if (opts.adminOnly && live.user.role !== "admin") {
       main.append(emptyState("This page is for administrators", "Ask the person who runs this system to review sites."));
       return;
     }
+    const holder = skeleton();
+    main.classList.add("is-loading");
+    main.setAttribute("aria-busy", "true");
+    main.prepend(holder);
+    live.busy = true;
+    this.watch(main);
     try { await render(main, { user: live.user }); }
-    catch (e) { main.append(h("p", { class: "err" }, e.message || "Something went wrong loading this page.")); }
+    catch (e) {
+      if (e.status === 401) { this.signedOut(); return; }
+      main.append(h("p", { class: "err" }, e.message || "Something went wrong loading this page."));
+    } finally {
+      holder.remove();
+      main.classList.remove("is-loading");
+      main.removeAttribute("aria-busy");
+      if (live.main === main) {
+        live.busy = false; labelTables(main);
+        if (live.dirty) { live.dirty = false; this.refresh(); }
+      }
+    }
+  },
+
+  // Keep an eye on a content area: note when the person starts typing (a redraw must not eat it), and label new tables.
+  watch(main) {
+    const live = this.live;
+    if (live.watcher) live.watcher.disconnect();
+    const note = () => { main.dataset.touched = "1"; };
+    main.addEventListener("input", note, true);
+    main.addEventListener("change", note, true);
+    live.watcher = new MutationObserver(() => labelTables(main));
+    live.watcher.observe(main, { childList: true, subtree: true });
   },
 
   // Swap the content area for another page: run the old page's cleanup, update the active link and title, then render.
   async show(page) {
     const live = this.live;
+    this.cancelRefresh();
     for (const fn of live.leave.splice(0)) { try { fn(); } catch (e) { /* a page's cleanup must not stop navigation */ } }
     const main = h("main", { class: "main", id: "main" });
     live.main.replaceWith(main);                                  // a slow page still drawing into the old one can't spoil this one
     live.main = main;
     live.page = page;
-    for (const a of live.bar.querySelectorAll("nav a")) {
+    for (const a of live.shell.querySelectorAll("nav a")) {
       if (pageFile(a.href) === page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     }
+    const inMore = live.shell.querySelector(".sheet a[aria-current=page]");
+    live.shell.querySelector(".tab.more").classList.toggle("on", !!inMore);
     this.title(page);
     window.scrollTo(0, 0);
     await this.run(page);
   },
 
+  // The data this page showed has changed on the server: draw it again off screen, then swap it in, unless the person is
+  // in the middle of something (typing, a dialog open), in which case the page stays as it is until they move on.
+  async refresh() {
+    const live = this.live;
+    if (live && live.busy) live.dirty = true;                     // asked mid-draw: redraw as soon as this one finishes
+    if (!live || live.busy || live.refreshing || live.main.dataset.touched || document.querySelector(".modal-back, .sheet-back:not([hidden])")) return;
+    const page = live.page, entry = this.pages[page];
+    if (!entry || (entry.opts.adminOnly && live.user.role !== "admin")) return;
+    const fresh = h("main", { class: "main", id: "main" });
+    const stage = h("div", { class: "stage", "aria-hidden": "true", style: `width:${live.main.clientWidth}px` }, fresh);
+    document.body.append(stage);
+    const job = { stage, old: live.leave.splice(0), cancelled: false };
+    live.refreshing = job;
+    let failed = false;
+    try { await entry.render(fresh, { user: live.user }); } catch (e) { failed = true; }
+    if (job.cancelled) return;                                    // the person moved on; show() already cleaned up
+    live.refreshing = null;
+    stage.remove();
+    if (failed) { live.leave.splice(0).forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } }); live.leave.push(...job.old); return; }
+    job.old.forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } });
+    const scroll = window.scrollY;
+    live.main.replaceWith(fresh);
+    live.main = fresh;
+    this.watch(fresh);
+    labelTables(fresh);
+    window.scrollTo(0, scroll);
+  },
+
+  // Called when a page is left while a refresh is drawing: its old content's cleanup still has to run, and the draft is dropped.
+  cancelRefresh() {
+    const job = this.live && this.live.refreshing;
+    if (!job) return;
+    job.cancelled = true;
+    job.stage.remove();
+    job.old.forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } });
+    this.live.refreshing = null;
+  },
+
   // Move to another page without reloading. Anything that isn't one of our pages loads normally.
   async go(href, push = true) {
-    const file = pageFile(href), spec = PAGE_SPECS[file];
-    if (!this.live || !spec) { location.href = href; return; }
+    const file = pageFile(href);
+    if (!this.live || !PAGE_SPECS[file]) { location.href = href; return; }
     this.target = file;
     if (push) history.pushState(null, "", new URL(href, location.href).pathname + new URL(href, location.href).search);
     if (this.pages[file]) { await this.show(file); return; }
-    try {
-      for (const css of spec.styles || []) await loadStyle(css);
-      if (spec.chart && typeof Chart === "undefined") { try { await loadScript(CHART_SRC); } catch (e) { /* charts say so themselves */ } }
-      for (const s of spec.scripts) await loadScript(s);          // the page's script calls Praise.start, which shows it
-    } catch (e) { location.href = href; }
+    try { await loadPage(file); }                                 // the page's script calls Praise.start, which shows it
+    catch (e) { location.href = href; }
   },
 
-  // Rebuild everything from the sign-in on (the account switched space, so the whole shell changes look).
-  async reboot(page) {
-    if (this.live) for (const fn of this.live.leave.splice(0)) { try { fn(); } catch (e) { /* ignore */ } }
-    this.live = null;
-    history.replaceState(null, "", page);
-    this.target = page;
-    const known = this.pages[page];
-    if (known) return this.start(page, known.render, known.opts);
-    const spec = PAGE_SPECS[page];
-    for (const css of spec.styles || []) await loadStyle(css);
-    if (spec.chart && typeof Chart === "undefined") { try { await loadScript(CHART_SRC); } catch (e) { /* ignore */ } }
-    for (const s of spec.scripts) await loadScript(s);
+  // Show this account (the space switched, or the details changed) from the start: a new shell in the right look, with the
+  // home page. The browser cross-fades the two looks where it can.
+  swap(me, page) {
+    const change = () => {
+      this.cancelRefresh();
+      if (this.live) for (const fn of this.live.leave.splice(0)) { try { fn(); } catch (e) { /* ignore */ } }
+      this.live = null;
+      history.replaceState(null, "", page);
+      this.target = page;
+      this.mount(me, page);                                       // the cross-fade needn't wait for the data
+    };
+    if (document.startViewTransition && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) document.startViewTransition(change);
+    else change();
   },
+
 };
 
 // Links between dashboard pages swap the content instead of reloading (modifier clicks and new tabs still work normally).
@@ -532,6 +813,8 @@ document.addEventListener("click", (e) => {
   Praise.go(a.href);
 });
 window.addEventListener("popstate", () => { if (Praise.live) Praise.go(location.href, false); });
+// When a read is found to have changed behind the page's back, the page redraws itself.
+Api.onChange(() => Praise.refresh());
 
 // Plain-language wording for the events Praise Shield records. Returns null for events from the
 // family extension, so a caller can skip them.

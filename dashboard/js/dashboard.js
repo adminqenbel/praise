@@ -6,7 +6,7 @@ const ONLINE_MS = 15 * 60 * 1000;
 // The buddy at the top of the home page: says one useful thing, then reacts to what you do.
 function buddyBar(who) {
   const host = h("div", { class: "buddy-bar" });
-  const buddy = PraiseBuddy.mount(host, { who, base: "img/", height: 96, side: true, sleeps: true });
+  const buddy = PraiseBuddy.mount(host, { who, height: 88, side: true, sleeps: true });
   const line = (kind, ctx) => { const s = PraiseCompanion.say(who, kind, ctx); buddy.say(s.text, s.mood); };
   Praise.onLeave(() => buddy.destroy());            // its timers must stop when another tab is opened
 
@@ -139,7 +139,7 @@ async function adultHome(main) {
   main.append(h("section", { class: "block" }, h("header", null, h("h2", null, "Warnings per day"), h("p", null, "Last 7 days")),
     days.length ? h("div", { class: "chart-box" }, canvas) : emptyState("No warnings yet", "Days appear here when Praise Shield steps in.")));
   if (days.length) drawChart(canvas, { type: "bar",
-    data: { labels: days.map((d) => d.day.slice(5)), datasets: [{ data: days.map((d) => d.count), backgroundColor: "#0e7c7b", borderRadius: 4, maxBarThickness: 48 }] },
+    data: { labels: days.map((d) => d.day.slice(5)), datasets: [{ data: days.map((d) => d.count), backgroundColor: themeVar("--chart-1"), borderRadius: 4, maxBarThickness: 48 }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
 
   // ---- recent warnings ----
@@ -156,11 +156,14 @@ async function adultHome(main) {
 // Home page. Adults get their own version above; families get a door per child, access requests to approve, two charts and recently closed sites.
 Praise.start("home.html", async (main, { user }) => {
   if (user.account_type === "adult") return adultHome(main);
-  const [{ children }, stats, { policies }, req] = await Promise.all([
+  // One round of reads, all at once: the children, this week's numbers, the rules, the requests and the recent closed sites.
+  const [{ children }, stats, { policies }, req, recent] = await Promise.all([
     Api.get("/api/children"), Api.get("/api/stats?days=7"), Api.get("/api/policies"),
-    Api.get("/api/events?kind=browser&type=access_request&limit=20"),
+    Api.get("/api/events?kind=browser&type=access_request&limit=20"), Api.get("/api/events?kind=browser&limit=100"),
   ]);
-  const perChild = await Promise.all(children.map((c) => Api.get(`/api/stats?child_id=${c.id}&days=7`)));
+  // Sites closed per child come with the numbers; a server that doesn't send them yet is asked once per child.
+  const closedBy = stats.blocked_by_child || Object.fromEntries(await Promise.all(children.map(async (c) =>
+    [c.id, (await Api.get(`/api/stats?child_id=${c.id}&days=7`)).totals.blocked])));
   const t = stats.totals;
   const bar = buddyBar("family");
   main.append(bar.host);
@@ -181,7 +184,7 @@ Praise.start("home.html", async (main, { user }) => {
     h("h1", null, greeting()),
     h("p", { class: "lede" }, onlineLine(children) + sentence),
     h("div", { class: "doors" },
-      children.map((c, i) => childDoor(c, perChild[i].totals.blocked)),
+      children.map((c) => childDoor(c, closedBy[c.id] || 0)),
       h("a", { class: "door-item add", href: "children.html", "aria-label": "Add a child" },
         doorSvg(), h("strong", null, "Add a child"), h("span", null, "Get a pairing code")))));
 
@@ -235,14 +238,13 @@ Praise.start("home.html", async (main, { user }) => {
       cats.length ? h("div", { class: "chart-box" }, c2) : emptyState("Nothing closed yet", "Categories appear here as sites are closed."))));
 
   if (days.length) drawChart(c1, { type: "bar",
-    data: { labels: days.map((d) => d.day.slice(5)), datasets: [{ data: days.map((d) => d.count), backgroundColor: "#8b5cf6", borderRadius: 8, maxBarThickness: 56 }] },
+    data: { labels: days.map((d) => d.day.slice(5)), datasets: [{ data: days.map((d) => d.count), backgroundColor: themeVar("--chart-1"), borderRadius: 8, maxBarThickness: 56 }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
   if (cats.length) drawChart(c2, { type: "bar",
-    data: { labels: cats.map(([c]) => catLabel(c)), datasets: [{ data: cats.map(([, n]) => n), backgroundColor: "#2b2140", borderRadius: 8, maxBarThickness: 28 }] },
+    data: { labels: cats.map(([c]) => catLabel(c)), datasets: [{ data: cats.map(([, n]) => n), backgroundColor: themeVar("--chart-2"), borderRadius: 8, maxBarThickness: 28 }] },
     options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
 
   // ---- recent closed sites ----
-  const recent = await Api.get("/api/events?kind=browser&limit=100");
   const closed = recent.events.filter((e) => e.decision && e.decision.action !== "ALLOW").slice(0, 8);
   const recentBlock = h("section", { class: "block" }, h("header", null, h("h2", null, "Recently closed"), h("a", { href: "events.html" }, "See all activity")));
   if (!closed.length) recentBlock.append(emptyState("Nothing closed yet", "Closed sites will be listed here with the reason."));
