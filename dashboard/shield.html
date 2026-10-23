@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Praise Shield: protection that speaks up only when it matters</title>
   <meta name="description" content="Praise Shield warns you about scams and fake bank pages, keeps trackers out, and pauses a form before sensitive data goes somewhere risky.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
-  <link rel="stylesheet" href="css/shield.css?v=b2">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://api.praise.qenbel.site http://localhost:5000; base-uri 'none'; form-action 'none'">
+  <link rel="stylesheet" href="css/shield.css?v=b3">
 </head>
 <body class="shield-site">
   <header class="sh-bar">
@@ -105,7 +105,8 @@
     <a href="home.html">Sign in</a>
   </footer>
 
-  <script src="js/ring.js?v=b2"></script>
-  <script src="js/shield-landing.js?v=b2"></script>
+  <script src="js/ring.js?v=b3"></script>
+  <script src="js/api.js?v=b3"></script>
+  <script src="js/shield-landing.js?v=b3"></script>
 </body>
 </html>

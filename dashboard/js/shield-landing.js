@@ -1,5 +1,8 @@
 "use strict";
 
+// Wake the API now, so sign-up is quick if the visitor goes there next (it sleeps when idle).
+if (typeof Api !== "undefined") Api.warm();
+
 // The landing page's demonstration ring: switch a layer and the ring answers.
 (() => {
   const host = document.getElementById("ringHost");

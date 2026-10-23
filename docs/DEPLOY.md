@@ -55,9 +55,23 @@ Free-tier projects pause after about a week without activity; move to a paid pla
    and redeploy. Wrong here means every user shares one rate limit.
 
 **Free plan:** the service sleeps after about 15 idle minutes and takes tens of seconds to wake. A child's browser gives
-up after 8 s and applies its offline rules (unknown sites stay closed) until it answers. A free uptime monitor
-(UptimeRobot, cron-job.org) calling `/health` every 10 minutes keeps it awake; one always-on service fits in the free
-monthly hours. Move to a paid instance before the beta grows.
+up after 8 s and applies its offline rules (unknown sites stay closed) until it answers. Three layers deal with it:
+
+1. **Keep it awake (do this).** An outside monitor requests the API every 5 minutes; any request counts as activity. On
+   cron-job.org (free, no card): Create cronjob, URL `https://api.praise.qenbel.site/health/ready`, schedule every 5
+   minutes, request method GET, and turn on "notify me on failure". UptimeRobot (5-minute checks) works too. Use
+   `/health/ready`, not `/health`: it also runs one trivial query, which keeps the free Supabase project from pausing
+   after a quiet week and tells the monitor when the database is down (answers 503). GitHub Actions schedules are too
+   late and too irregular for a 15-minute window. Always-on is about 744 of the workspace's 750 free hours a month, so
+   keep this the only free web service in the Render workspace. The extension and the dashboard don't depend on it, it
+   only avoids the wait below.
+2. **Warm it up early.** The three landing pages call `Api.warm()` (a cookie-less ping to `/health`), so a visitor who
+   reads the page for a few seconds usually finds it awake when they reach sign-up.
+3. **Say so while it wakes.** The dashboard shows "Getting Praise ready" (after one second, so fast loads don't flash
+   it) and retries its first request for up to two minutes, then offers "Try again". See `Api.patient` in
+   `dashboard/js/api.js`.
+
+Move to a paid instance (Render Starter, about 7 USD a month) before families depend on it: it never sleeps.
 
 One gunicorn worker with 8 threads on purpose: the rate limiter and the AI budget live in that process. Before adding
 workers or instances, move them to shared storage (roadmap A).
@@ -94,6 +108,6 @@ store copy: forced installation by policy only works for store extensions on PCs
 
 ## 5. After every deploy
 
-- `/health` answers; dashboard sign-in works; a pairing code pairs a store (or packed) copy of the extension.
+- `/health` and `/health/ready` answer (the keep-awake monitor from section 2 is green); dashboard sign-in works; a pairing code pairs a store (or packed) copy of the extension.
 - `node scripts/e2e_pair.js` against staging with a real classifier before releases (see README).
 - New tables: enable row level security in the same migration (`tests/test_models.py` fails otherwise).

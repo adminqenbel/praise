@@ -3,10 +3,12 @@ import os
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from sqlalchemy import text
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import DEV_SECRET_KEY, Config, production_problems
 from database.postgres import db, migrate
+from services.ratelimit import rate_limit
 
 
 # Application factory: builds the Flask app, wires the databases and registers every route group.
@@ -100,6 +102,19 @@ def create_app(config_class=Config):
     @app.get("/health")
     def health():
         return jsonify(status="ok")
+
+    # Same, plus one trivial query. For the keep-awake monitor (docs/DEPLOY.md): it keeps a free database from pausing for
+    # inactivity and reports a database outage. Kept apart from /health so a database blip never makes the host restart us.
+    @app.get("/health/ready")
+    @rate_limit("ready", 60, 600)
+    def ready():
+        try:
+            db.session.execute(text("SELECT 1"))
+        except Exception:
+            db.session.rollback()
+            security_log.error("readiness check: database unreachable")
+            return jsonify(status="degraded", database="down"), 503
+        return jsonify(status="ok", database="ok")
 
     return app
 

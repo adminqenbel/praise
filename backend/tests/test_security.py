@@ -8,7 +8,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from app import create_app
 from database.postgres import db
 from services.ratelimit import RateLimiter, limiter
-from tests.test_models import TestConfig
+from tests.test_models import TestConfig, app  # noqa: F401  (fixture)
 
 
 class LimitedConfig(TestConfig):
@@ -182,3 +182,30 @@ def test_injection_shaped_inputs_are_inert(limited_app):
     r = c.post("/api/children", json={"name": "<script>alert(1)</script>"}, headers=h)
     assert r.status_code == 201          # stored as text; the dashboard renders with textContent
     assert c.post("/api/auth/login", json={"email": {"$ne": ""}, "password": {"$ne": ""}}).status_code == 401
+
+
+# ---- health checks (host probe and keep-awake monitor) ----------------------------------------------------------------
+
+def test_health_answers_without_touching_the_database(app):
+    r = app.test_client().get("/health")
+    assert r.status_code == 200 and r.get_json() == {"status": "ok"}
+
+
+def test_ready_checks_the_database_and_reports_an_outage(app, monkeypatch):
+    c = app.test_client()
+    r = c.get("/health/ready")
+    assert r.status_code == 200 and r.get_json() == {"status": "ok", "database": "ok"}
+
+    def down(*a, **kw):
+        raise RuntimeError("connection refused")
+    monkeypatch.setattr(db.session, "execute", down)
+    r = c.get("/health/ready")
+    assert r.status_code == 503 and r.get_json() == {"status": "degraded", "database": "down"}
+    assert "connection refused" not in r.get_data(as_text=True)          # no internals in the answer
+    assert c.get("/health").status_code == 200                           # the host's own probe is unaffected
+
+
+def test_ready_is_rate_limited(limited_app):
+    c = limited_app.test_client()
+    assert all(c.get("/health/ready").status_code == 200 for _ in range(60))
+    assert c.get("/health/ready").status_code == 429

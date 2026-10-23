@@ -1,5 +1,8 @@
 "use strict";
 
+// Wake the API now, so sign-up is quick if the visitor goes there next (it sleeps when idle).
+if (typeof Api !== "undefined") Api.warm();
+
 // The hero door: tap to open (a parent saying yes), tap again to close.
 (() => {
   const door = document.getElementById("heroDoor");

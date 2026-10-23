@@ -84,6 +84,16 @@ body.hub .straight h2 { font-size: 1.5rem; font-stretch: 88%; margin-bottom: .6r
 
 .hub-foot { max-width: 1120px; margin: 0 auto; padding: 1.5rem; border-top: 1px solid var(--n-line); display: flex; gap: 1rem 2rem; flex-wrap: wrap; color: var(--n-text2); font-size: .95rem; }
 
+/* ---- waiting for the server to wake (before we know which version the account is) ---- */
+html[data-theme="neutral"] .wait { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: .9rem; text-align: center; padding: 2rem 1.25rem; }
+html[data-theme="neutral"] .wait h1 { font: 700 clamp(1.7rem, 4vw, 2.2rem)/1.15 var(--n-font); font-stretch: 88%; margin: 1.2rem 0 0; }
+html[data-theme="neutral"] .wait-note { color: var(--n-text2); max-width: 26rem; margin: 0; }
+html[data-theme="neutral"] .wait-bar { width: min(16rem, 70vw); height: 6px; border-radius: 99px; background: var(--n-line); overflow: hidden; margin-top: .6rem; }
+html[data-theme="neutral"] .wait-bar i { display: block; height: 100%; width: 40%; border-radius: inherit; background: var(--n-ink); animation: wait-slide 1.5s ease-in-out infinite; }
+@keyframes wait-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { html[data-theme="neutral"] .wait-bar i { animation: none; width: 100%; opacity: .35; } }
+html[data-theme="neutral"] .wait button { background: var(--n-ink); border-color: var(--n-ink); border-radius: 8px; font-family: var(--n-font); padding: .65rem 1.3rem; margin-top: .6rem; }
+
 /* ---- sign-in / sign-up (before we know which version the account is) ---- */
 html[data-theme="neutral"] .auth { grid-template-columns: minmax(0, 27rem); justify-content: center; align-items: center; padding: 2rem 1.25rem; }
 html[data-theme="neutral"] .auth-card { display: grid; gap: .2rem; }

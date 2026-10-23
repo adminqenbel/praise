@@ -234,6 +234,35 @@ function buildShell(user, page, logout, googleOn) {
   return { shell: h("div", { class: "shell" }, bar, main), main };
 }
 
+// The "Praise" mark with its two dots, linking back to the landing hub.
+const wordmark = () => h("a", { class: "wordmark", href: "index.html", "aria-label": "Praise, all versions" },
+  "Praise ", h("span", { class: "dots", "aria-hidden": "true" }, h("i"), h("i")));
+
+// ---- waiting for the server ---------------------------------------------------------------------
+// The API sleeps when idle and takes up to a minute to wake, so the first page of a visit can be slow. This fills the
+// screen meanwhile, so nobody stares at a blank page. `stop()` ends its clock once something else takes the screen.
+function waitScreen() {
+  const started = Date.now();
+  const title = h("h1", null, "Getting Praise ready");
+  const note = h("p", { class: "wait-note", role: "status", "aria-live": "polite" }, "One moment.");
+  const el = h("div", { class: "wait" }, wordmark(), title, note, h("div", { class: "wait-bar", "aria-hidden": "true" }, h("i")));
+  const words = () => {
+    const sec = Math.round((Date.now() - started) / 1000);
+    note.textContent = sec < 6 ? "One moment."
+      : "Praise's server was resting and is waking up. The first visit after a quiet spell can take up to a minute. You don't need to do anything.";
+  };
+  const clock = setInterval(words, 1000);
+  words();
+  return { el, stop: () => clearInterval(clock) };
+}
+
+// Shown when the server still hasn't answered after the wait.
+function waitFailed() {
+  return h("div", { class: "wait" }, wordmark(), h("h1", null, "Praise isn't answering"),
+    h("p", { class: "wait-note" }, "Check your internet connection, then try again. If it keeps happening, the service may be down for a short while."),
+    h("button", { type: "button", onclick: () => location.reload() }, "Try again"));
+}
+
 // ---- Google sign-in ----------------------------------------------------------------------------
 // A full page visit to the API, which sends the browser to Google and back to `next` (a page of this dashboard).
 // Anything that went wrong comes back as ?google_error=<reason>.
@@ -336,9 +365,7 @@ function authScreen(onDone) {
   const googleError = takeGoogleError();
   if (googleError) { error.textContent = googleError; error.hidden = false; }
 
-  const wordmark = h("a", { class: "wordmark", href: "index.html", "aria-label": "Praise, all versions" },
-    "Praise ", h("span", { class: "dots", "aria-hidden": "true" }, h("i"), h("i")));
-  return h("div", { class: "auth" }, h("div", { class: "auth-card" }, wordmark, title, lede, form,
+  return h("div", { class: "auth" }, h("div", { class: "auth-card" }, wordmark(), title, lede, form,
     h("p", { class: "or" }, "or"), google, toggleText));
 }
 
@@ -367,7 +394,7 @@ function loadStyle(href) {
   if (have) return Promise.resolve();
   return new Promise((resolve) => {
     const l = document.createElement("link");
-    l.rel = "stylesheet"; l.href = href + "?v=b2";
+    l.rel = "stylesheet"; l.href = href + "?v=b3";
     l.onload = l.onerror = resolve;                               // a missing stylesheet must not stop the page
     document.head.append(l);
   });
@@ -379,7 +406,7 @@ function loadScript(src) {
   if (have) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = src.startsWith("http") ? src : src + "?v=b2";
+    s.src = src.startsWith("http") ? src : src + "?v=b3";
     s.onload = resolve;
     s.onerror = () => reject(new Error("Couldn't load " + src));
     document.head.append(s);
@@ -405,11 +432,17 @@ const Praise = {
     document.body.replaceChildren();
     document.documentElement.dataset.theme = "neutral";          // until we know which version this account is
     let me;
-    try { me = await Api.get("/api/auth/me"); }
+    // A quick answer shows nothing extra; a slow one (a sleeping server) shows the waiting screen after a second.
+    const wait = waitScreen();
+    const late = setTimeout(() => document.body.replaceChildren(wait.el), 1000);
+    try { me = await Api.patient("/api/auth/me"); }
     catch (e) {
-      if (e.status && e.status !== 401) { document.body.append(h("p", { class: "err", style: "padding:2rem" }, e.message)); return; }
-      if (!e.status) { document.body.append(h("p", { class: "err", style: "padding:2rem" }, e.message)); return; }
-    }
+      if (e.status !== 401) {
+        document.body.replaceChildren(e.status ? h("p", { class: "err", style: "padding:2rem" }, e.message) : waitFailed());
+        return;
+      }
+    } finally { clearTimeout(late); wait.stop(); }
+    document.body.replaceChildren();
     if (!me) { document.body.append(authScreen(() => Praise.start(page, render, opts))); return; }
 
     const user = me.user;

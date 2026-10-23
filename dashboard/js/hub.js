@@ -1,5 +1,8 @@
 "use strict";
 
+// Wake the API now, so sign-up is quick if the visitor goes there next (it sleeps when idle).
+if (typeof Api !== "undefined") Api.warm();
+
 // The two buddies on the landing hub. Each says hello for the time of day, answers when you hover
 // its card, and reacts when you tap it. Nothing here talks to the server.
 (() => {

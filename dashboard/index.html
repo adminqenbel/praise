@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Praise: safer browsing, whoever is at the screen</title>
   <meta name="description" content="Praise checks each new site before it can do harm. Use it to look after your family's browsing, or your own.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
-  <link rel="stylesheet" href="css/neutral.css?v=b2">
-  <link rel="stylesheet" href="css/companion.css?v=b2">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://api.praise.qenbel.site http://localhost:5000; base-uri 'none'; form-action 'none'">
+  <link rel="stylesheet" href="css/neutral.css?v=b3">
+  <link rel="stylesheet" href="css/companion.css?v=b3">
 </head>
 <body class="hub">
   <header class="hub-bar">
@@ -92,8 +92,9 @@
     <a href="shield.html">Praise Shield</a>
     <a href="home.html">Sign in</a>
   </footer>
-  <script src="js/companion.js?v=b2"></script>
-  <script src="js/companion-ui.js?v=b2"></script>
-  <script src="js/hub.js?v=b2"></script>
+  <script src="js/companion.js?v=b3"></script>
+  <script src="js/companion-ui.js?v=b3"></script>
+  <script src="js/api.js?v=b3"></script>
+  <script src="js/hub.js?v=b3"></script>
 </body>
 </html>
