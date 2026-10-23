@@ -176,13 +176,6 @@
         box.append(talkBtn);
       }
 
-      // If this page's rules won't let the sprite load, go without rather than show a broken picture.
-      const sprite = box.querySelector(".buddy-base");
-      sprite.addEventListener("error", () => {
-        console.warn("Praise buddy: its picture could not be loaded on this page, so it stays hidden here.");
-        hide();
-      }, { once: true });
-
       const on = (target, type, fn, opt) => { target.addEventListener(type, fn, opt); cleanups.push(() => target.removeEventListener(type, fn, opt)); };
 
       // ---- drag it somewhere else; it snaps to the nearest side ----

@@ -185,12 +185,13 @@ What it does:
   come back. On the block and warning pages it also paces about, but it never talks over the explanation, and it stays calm
   (no hopping) while it is showing a warning or an apology. Under "reduce motion" all of this is off.
 - **Moods.** happy, curious, thinking, sleepy, alert, sorry, shy, nod and celebrate each have their own expression (drawn
-  by `scripts/make_faces.py`) and motion. Motion stops when the system asks for reduced motion.
+  on its screen) and motion. Motion stops when the system asks for reduced motion.
 
 How it is built: the wording lives in `common/companion.js` (pure logic, no network, works with no model),
-the sprite and bubble in `common/companion-ui.js` and `common/companion.css`. All three are copied into the extension and
-the dashboard by `scripts/sync_common.py`. The cut-out images come from `scripts/make_companions.py` (needs `rembg`, run once
-from your own copy of the source art) and the expressions from `scripts/make_faces.py`; the results are in `assets/companions/`.
+the buddy (drawn as inline SVG, so no picture files and nothing a page's content rules can block) and its bubble in
+`common/companion-ui.js` and `common/companion.css`. All three are copied into the extension and the dashboard by
+`scripts/sync_common.py`. Dori is violet with an amber lamp, Ringo white and black with red; both take their colours from
+`--b-*` variables in `common/companion.css`.
 
 **The buddy on web pages (only after pairing).** Until a pairing code has been accepted the extension is neutral: no robot in
 the popup, no buddy on pages, nothing injected. Once the browser is paired, Dori (a family account) or Ringo (an adult's own) lives in the corner of

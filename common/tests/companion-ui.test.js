@@ -7,15 +7,23 @@ const C = require("../companion.js");
 
 const root = path.resolve(__dirname, "..", "..");
 
-test("every face the UI can ask for has a picture for both buddies, in every place the pictures are copied to", () => {
-  const names = [...Object.values(UI.FACE_FOR), "blink", "look"];
-  for (const dir of ["extension/companion", "dashboard/img"]) {
-    for (const who of ["family", "adult"]) {
-      for (const n of names) assert.ok(fs.existsSync(path.join(root, dir, `face-${who}-${n}.png`)), `${dir}/face-${who}-${n}.png`);
-      for (const f of [`robot-${who}.png`, `robot-${who}-sm.png`, `orb-${who}.png`, `orb-${who}-sm.png`]) assert.ok(fs.existsSync(path.join(root, dir, f)), `${dir}/${f}`);
+test("every face the UI can ask for has a drawing, and every drawing is made only of shapes the buddy's screen can show", () => {
+  const names = [...Object.values(UI.FACE_FOR), "happy", "blink", "look"];
+  const shapes = new Set(["rect", "path", "ellipse", "circle"]);
+  for (const n of names) {
+    assert.ok(Array.isArray(UI.FACES[n]) && UI.FACES[n].length >= 2, `a drawing for ${n}`);
+    for (const [tag, attrs] of UI.FACES[n]) {
+      assert.ok(shapes.has(tag), `${n}: ${tag}`);
+      assert.ok(Object.values(attrs).every((v) => typeof v === "string" || typeof v === "number"), `${n}: attributes`);
     }
-    assert.ok(fs.existsSync(path.join(root, dir, "faces.json")), `${dir}/faces.json`);
   }
+});
+
+test("no picture files are shipped for the buddy: it is drawn inline, so a page's content rules can't block it", () => {
+  for (const dir of ["extension/companion", "dashboard/img"]) assert.ok(!fs.existsSync(path.join(root, dir)), `${dir} is gone`);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, "extension/manifest.json"), "utf8"));
+  const exposed = manifest.web_accessible_resources.flatMap((r) => r.resources);
+  assert.deepStrictEqual(exposed.sort(), ["block/block.html", "warn/warn.html"]);
 });
 
 test("every mood the voice engine can pick is one the UI knows how to show", () => {

@@ -13,7 +13,6 @@ An AI-assisted web-protection platform.
 | Dashboard | `dashboard/` | Static HTML/CSS/vanilla JS, Chart.js from a CDN. Landing hub, family dashboard, adult "Shield" dashboard, admin review queue |
 | Extension | `extension/` | One Chrome Manifest V3 extension. Neutral until a one-time pairing code is accepted; the code decides family mode (buddy Dori) or adult Praise Shield mode (buddy Ringo) |
 | Shared browser code | `common/` | Copied into `extension/` and `dashboard/js/` by `scripts/sync_common.py` |
-| Buddy art | `assets/companions/` | Source PNGs (cut-outs and expressions) |
 
 Decision order (first match wins): parent rule, admin-verified site, trusted reputation, category policy, TLD policy, AI classification (if confident enough), unknown-site default. AI results are stored, so a site is classified once. Admins verify results, which makes them final for everyone.
 

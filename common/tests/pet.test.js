@@ -198,14 +198,12 @@ test("a parent can switch the chat off for a child's browser; adults always have
   assert.strictEqual(fresh.store.petChat, false);
 });
 
-test("the manifest lets pages load the buddy's pictures, and do not use dynamic URLs (they stopped the pictures loading in pages)", () => {
+test("the buddy needs no web-accessible pictures (it is drawn inline), and the manifest doesn't use dynamic URLs", () => {
   const root = path.resolve(__dirname, "..", "..");
   for (const dir of ["extension"]) {
     const m = JSON.parse(fs.readFileSync(path.join(root, dir, "manifest.json"), "utf8"));
-    const entry = m.web_accessible_resources.find((w) => w.resources.includes("companion/*.png"));
-    assert.ok(entry, `${dir}: companion/*.png must be web accessible`);
-    assert.deepStrictEqual(entry.matches, ["http://*/*", "https://*/*"]);
-    assert.ok(!m.web_accessible_resources.some((w) => "use_dynamic_url" in w), `${dir}: use_dynamic_url breaks image loading in pages`);
+    assert.ok(!m.web_accessible_resources.some((w) => w.resources.some((r) => r.endsWith(".png"))), `${dir}: no pictures are exposed to web pages`);
+    assert.ok(!m.web_accessible_resources.some((w) => "use_dynamic_url" in w), `${dir}: use_dynamic_url breaks the warning page's address`);
     assert.ok(m.permissions.includes("scripting"), `${dir}: needs scripting to register the buddy`);
   }
 });

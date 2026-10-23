@@ -4,7 +4,7 @@
 
 /* One popup, three looks. Everything below uses these tokens; each mode only changes the tokens and a few shapes.
    neutral (before a pairing code): plain white and ink, like the Praise landing page.
-   family: the warm violet glass.   adult: the calm teal on porcelain. */
+   family: the warm violet glass.   adult: red and white. */
 :root {
   --ink: #141b2d; --slate: #4f5870; --line: #e3e6ee; --page: #fff; --panel: #fff; --panel-line: #e3e6ee;
   --accent: #141b2d; --accent-ink: #0b1020; --focus: #141b2d; --danger: #b3261e; --check: #141b2d;
@@ -19,8 +19,8 @@ body[data-mode="family"] {
   --radius: 22px; --btn-radius: 999px; --font: "Figtree", "Segoe UI", system-ui, sans-serif; --head-font: "Bricolage Grotesque", "Segoe UI", sans-serif;
 }
 body[data-mode="adult"] {
-  --ink: #0f2a2b; --slate: #4b6162; --line: #d5e0df; --page: #f2f5f4; --accent: #0e7c7b; --accent-ink: #095b5a; --focus: #0e7c7b; --check: #0e7c7b;
-  --code-bg: #dcefed; --code-line: #a7d0cc; --btn-bg: #0f2a2b; --btn-line: #0f2a2b; --quiet-line: #b4c5c3; --quiet-hover: #f2f5f4;
+  --ink: #17181b; --slate: #5a5e68; --line: #e5e6ea; --page: #f7f7f8; --accent: #d7263d; --accent-ink: #b01d31; --focus: #d7263d; --check: #d7263d;
+  --code-bg: #fdebed; --code-line: #f3b6bd; --btn-bg: #17181b; --btn-line: #17181b; --quiet-line: #c9ccd3; --quiet-hover: #f7f7f8;
 }
 
 * { box-sizing: border-box; }
@@ -53,12 +53,12 @@ body[data-mode="neutral"] h1 { font-size: 1.05rem; font-weight: 600; color: var(
 .wordmark .dots { display: inline-flex; gap: 3px; }
 .wordmark .dots i { width: .5rem; height: .5rem; border-radius: 50%; display: block; }
 .wordmark .dots i:first-child { background: #6d49de; }
-.wordmark .dots i:last-child { background: #0e7c7b; }
+.wordmark .dots i:last-child { background: #d7263d; }
 .mark { flex: none; }
 #markFamily { width: 24px; height: 30px; fill: #8b5cf6; }
 #markFamily circle { fill: #ffb627; }
 #markAdult { width: 30px; height: 30px; }
-#markAdult path { stroke: #0e7c7b; }
+#markAdult path { stroke: #d7263d; }
 #markNeutral, #markFamily, #markAdult { display: none; }
 body[data-mode="neutral"] #markNeutral { display: inline-flex; }
 body[data-mode="family"] #markFamily { display: block; }
@@ -76,10 +76,10 @@ body #chatBox .chat .chat-chip { padding: .25rem .65rem; font-size: .82rem; font
 body #chatBox .chat .chat-chip:hover:not(:disabled) { background: #f1ecfb; }
 body #chatBox .chat .chat-send { padding: .45rem .8rem; font-size: .95rem; font-weight: 700; color: #fff; background: #7c4dde; border-radius: 10px; }
 body #chatBox .chat .chat-form input { width: auto; flex: 1; margin: 0; padding: .45rem .6rem; border: 1px solid #d9d2ea; border-radius: 10px; background: #fff; color: inherit; font: inherit; }
-body[data-mode="adult"] #chatBox .chat .chat-chip { border-color: #c9d6d5; border-radius: 6px; }
-body[data-mode="adult"] #chatBox .chat .chat-chip:hover:not(:disabled) { background: #f2f5f4; }
-body[data-mode="adult"] #chatBox .chat .chat-send { background: #0e7c7b; border-radius: 6px; }
-body[data-mode="adult"] #chatBox .chat .chat-form input { border-color: #c9d6d5; border-radius: 6px; }
+body[data-mode="adult"] #chatBox .chat .chat-chip { border-color: #c9ccd3; border-radius: 6px; }
+body[data-mode="adult"] #chatBox .chat .chat-chip:hover:not(:disabled) { background: #f7f7f8; }
+body[data-mode="adult"] #chatBox .chat .chat-send { background: #d7263d; border-radius: 6px; }
+body[data-mode="adult"] #chatBox .chat .chat-form input { border-color: #c9ccd3; border-radius: 6px; }
 p { margin: 0 0 12px; }
 .meta { color: var(--slate); font-size: .86rem; margin: 10px 0 4px; }
 body[data-mode="family"] .meta { font-size: .88rem; }

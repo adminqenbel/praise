@@ -1,7 +1,7 @@
 @font-face { font-family: "Instrument Sans"; src: url("../fonts/instrument-sans.woff2") format("woff2"); font-weight: 400 700; font-stretch: 75% 100%; font-display: swap; }
 
 :root {
-  --ink: #0f2a2b; --slate: #4b6162; --line: #d5e0df; --porcelain: #f2f5f4; --teal: #0e7c7b; --teal-ink: #095b5a;
+  --ink: #17181b; --slate: #5a5e68; --line: #e5e6ea; --porcelain: #f7f7f8; --teal: #d7263d; --teal-ink: #b01d31;
   --caution: #e0a100; --caution-ink: #6b4700; --danger: #b3261e;
   --font: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
@@ -37,7 +37,7 @@ li { margin: .25rem 0; }
 .btn, button { font: 650 1rem var(--font); cursor: pointer; padding: .62rem 1.15rem; border-radius: 8px; border: 1.5px solid var(--ink); text-decoration: none; display: inline-block; }
 .primary { background: var(--ink); color: #fff; }
 .primary:hover { background: var(--teal-ink); border-color: var(--teal-ink); }
-.quiet { background: transparent; color: var(--ink); border-color: #b4c5c3; }
+.quiet { background: transparent; color: var(--ink); border-color: #c9ccd3; }
 .quiet:hover { background: var(--porcelain); border-color: var(--ink); }
 .good { background: var(--teal); border-color: var(--teal); color: #fff; }
 .good:hover { background: var(--teal-ink); border-color: var(--teal-ink); }

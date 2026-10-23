@@ -73,7 +73,7 @@ const finish = (code) => { chrome.kill(); try { fs.rmSync(profile, { recursive: 
   const walk = (n, owner) => {
     const a = n.attributes || [], cls = a.includes("class") ? a[a.indexOf("class") + 1] : "";
     if (/\bbuddy-(family|adult)\b/.test(cls)) owner = cls;
-    if (n.nodeName === "IMG" && /\bbuddy-base\b/.test(cls)) sprites.push(owner || "");
+    if (/^svg$/i.test(n.nodeName) && /\bbuddy-base\b/.test(cls)) sprites.push(owner || "");
     (n.children || []).concat(n.shadowRoots || []).forEach((c) => walk(c, owner));
   };
   walk(doc.result.root);

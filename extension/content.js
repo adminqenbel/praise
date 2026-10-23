@@ -141,36 +141,44 @@
   const CSS = `
     :host { all: initial; }
     * { box-sizing: border-box; }
-    .backdrop { position: fixed; inset: 0; background: rgba(15, 42, 43, .5);
-      display: grid; place-items: center; padding: 16px; font: 16px/1.5 "Segoe UI", system-ui, sans-serif; color: #0f2a2b; }
-    .dialog { width: min(480px, 100%); background: #fff; border: 1px solid #d5e0df; border-left: 6px solid #e0a100; border-radius: 12px;
-      padding: 22px 24px; box-shadow: 0 18px 48px rgba(15, 42, 43, .3); }
+    .backdrop { position: fixed; inset: 0; background: rgba(20, 20, 24, .5);
+      display: grid; place-items: center; padding: 16px; font: 16px/1.5 "Segoe UI", system-ui, sans-serif; color: #17181b; }
+    .dialog { width: min(480px, 100%); background: #fff; border: 1px solid #e5e6ea; border-left: 6px solid #e0a100; border-radius: 12px;
+      padding: 22px 24px; box-shadow: 0 18px 48px rgba(20, 20, 24, .3); }
     h1 { margin: 0 0 8px; font: 650 1.35rem/1.15 "Segoe UI", system-ui, sans-serif; letter-spacing: -.01em; }
     p { margin: 0 0 12px; }
-    ul { margin: 0 0 14px; padding-left: 20px; color: #4b6162; }
+    ul { margin: 0 0 14px; padding-left: 20px; color: #5a5e68; }
     li { margin: 4px 0; }
-    .site { display: inline-block; padding: 1px 9px; border-radius: 6px; background: #f2f5f4; border: 1px solid #d5e0df; font-weight: 650; }
+    .site { display: inline-block; padding: 1px 9px; border-radius: 6px; background: #f7f7f8; border: 1px solid #e5e6ea; font-weight: 650; }
     .head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
     .head h1 { margin: 0; }
     .avatar { width: 44px; height: 44px; flex: none; object-fit: contain; }
     .banner .avatar { width: 28px; height: 28px; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: center; }
-    button, a.btn { font: 650 .98rem "Segoe UI", system-ui, sans-serif; cursor: pointer; border-radius: 8px; padding: 9px 18px; border: 1.5px solid #0f2a2b;
-      background: #0f2a2b; color: #fff; text-decoration: none; display: inline-block; }
-    button:hover, a.btn:hover { background: #095b5a; border-color: #095b5a; }
-    button.quiet { background: transparent; color: #0f2a2b; border-color: #b4c5c3; }
-    button.quiet:hover { background: #f2f5f4; border-color: #0f2a2b; }
-    a.btn.good { background: #0e7c7b; border-color: #0e7c7b; }
-    :focus-visible { outline: 3px solid #0e7c7b; outline-offset: 2px; }
-    .fine { margin: 14px 0 0; font-size: .86rem; color: #4b6162; }
+    button, a.btn { font: 650 .98rem "Segoe UI", system-ui, sans-serif; cursor: pointer; border-radius: 8px; padding: 9px 18px; border: 1.5px solid #17181b;
+      background: #17181b; color: #fff; text-decoration: none; display: inline-block; }
+    button:hover, a.btn:hover { background: #b01d31; border-color: #b01d31; }
+    button.quiet { background: transparent; color: #17181b; border-color: #c9ccd3; }
+    button.quiet:hover { background: #f7f7f8; border-color: #17181b; }
+    a.btn.good { background: #d7263d; border-color: #d7263d; }
+    :focus-visible { outline: 3px solid #d7263d; outline-offset: 2px; }
+    .fine { margin: 14px 0 0; font-size: .86rem; color: #5a5e68; }
     .banner { position: fixed; top: calc(12px + var(--slot, 0) * 100px); right: 12px; max-width: min(380px, calc(100vw - 24px)); background: #fff;
-      border: 1px solid #d5e0df; border-left: 6px solid #e0a100; border-radius: 10px; padding: 12px 14px;
-      box-shadow: 0 8px 24px rgba(15, 42, 43, .2); font: 14.5px/1.45 "Segoe UI", system-ui, sans-serif; color: #0f2a2b; display: flex; gap: 10px; align-items: flex-start; }
+      border: 1px solid #e5e6ea; border-left: 6px solid #e0a100; border-radius: 10px; padding: 12px 14px;
+      box-shadow: 0 8px 24px rgba(20, 20, 24, .2); font: 14.5px/1.45 "Segoe UI", system-ui, sans-serif; color: #17181b; display: flex; gap: 10px; align-items: flex-start; }
     .banner button { padding: 2px 10px; font-size: .85rem; }
   `;
 
-  // Ringo's small avatar. If a page's CSP won't load it, the dialog simply goes without.
-  const avatar = (el) => el("img", { className: "avatar", alt: "", src: chrome.runtime.getURL("companion/orb-adult-sm.png") });
+  // Ringo's small avatar, drawn inline (a page's content rules can't block it).
+  const avatar = () => {
+    const NS = "http://www.w3.org/2000/svg";
+    const mk = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+    const svg = mk("svg", { viewBox: "0 0 48 48", class: "avatar", "aria-hidden": "true" });
+    svg.append(mk("rect", { x: 4, y: 6, width: 40, height: 36, rx: 15, fill: "#fff", stroke: "#c9ccd3", "stroke-width": 2 }),
+      mk("rect", { x: 9, y: 12, width: 30, height: 22, rx: 10, fill: "#141416" }),
+      mk("path", { d: "M15 25q3-6 6 0M27 25q3-6 6 0", fill: "none", stroke: "#ff6070", "stroke-width": 2.6, "stroke-linecap": "round" }));
+    return svg;
+  };
 
   // Create a full-screen host with a closed shadow root and a constructed stylesheet (which a page's Content-Security-Policy cannot block).
   function mount(build) {

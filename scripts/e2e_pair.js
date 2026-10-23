@@ -130,7 +130,7 @@ const hasBuddy = (session) => ev(session, "(() => { const d = [...document.docum
     await sleep(3500);
     check(await ev(p.session, "document.body.dataset.mode") === mode, `the popup becomes the ${mode} version`);
     check(await ev(p.session, "!document.getElementById('buddy').hidden && !document.getElementById('petBox').hidden"), "the buddy and its switch appear");
-    check((await ev(p.session, "document.querySelector('#buddy img') && document.querySelector('#buddy img').src || ''")).includes(`-${mode}`), `the popup buddy is the ${mode} one`);
+    check((await ev(p.session, "(document.querySelector('#buddy .buddy') || {}).className || ''")).includes(`buddy-${mode}`) && await ev(p.session, "!!document.querySelector('#buddy svg.buddy-base')"), `the popup buddy is the ${mode} one`);
     check(await ev(p.session, mode === "adult" ? "!document.getElementById('adult').hidden && document.getElementById('family').hidden" : "!document.getElementById('family').hidden && document.getElementById('adult').hidden"), `only the ${mode} controls show`);
     check((await ev(p.session, "document.querySelector('.buddy-name').textContent")) === (mode === "adult" ? "Ringo" : "Dori"), "the switch names the right buddy");
     await shot(p.session, `2-${mode}-paired.png`);

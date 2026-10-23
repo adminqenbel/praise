@@ -45,15 +45,6 @@
         "http://*/*",
         "https://*/*"
       ]
-    },
-    {
-      "resources": [
-        "companion/*.png"
-      ],
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ]
     }
   ],
   "declarative_net_request": {

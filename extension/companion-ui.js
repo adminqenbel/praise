@@ -2,13 +2,14 @@
 // turns toward you, hops, hums, yawns, falls asleep when ignored, and reacts when you poke or pet it. It also talks
 // in a bubble and celebrates. Plain DOM, no dependencies.
 //
-//   const buddy = PraiseBuddy.mount(el, { who: "family", base: "../companion/", height: 220 });
+//   const buddy = PraiseBuddy.mount(el, { who: "family", height: 220 });
 //   buddy.say("Hello!", "happy");      // text and mood together
 //   buddy.setMood("thinking");
 //   await buddy.enter();               // bounce in
 //   buddy.destroy();
 //
-// Options: who, base, height, mood, bubble (default true), side (compact popup layout),
+// The buddy is drawn as inline SVG (no picture files), so a page's content rules can't block it. Options: who, height, mood,
+//   bubble (default true), side (compact popup layout),
 //   life    (default true)  idle behaviour, pointer-following and play; always off under "reduce motion"
 //   talk    (default true)  play reactions may put a line in the bubble; turn off where the bubble carries a message
 //   sleeps  (default false) nods off after a while without attention, wakes when you come back
@@ -16,22 +17,42 @@
 (function (root) {
   "use strict";
 
-  // Where each overlay face sits on its sprite (percent). Measured by scripts/make_faces.py.
-  const FACE = {
-    family: { band: [33, 26, 90, 55], ratio: [389, 520] },
-    adult: { band: [19, 20, 78, 45], ratio: [418, 520] },
+  // The faces the buddy can wear, drawn on its screen around the point (0, 0): each is a list of [tag, attributes] shapes.
+  // Strokes and fills take the eyes' colour (css --b-eye), so one drawing serves both buddies.
+  const LINE = { fill: "none", stroke: "currentColor", "stroke-width": 6, "stroke-linecap": "round", "stroke-linejoin": "round" };
+  const BROW = { ...LINE, "stroke-width": 4 };
+  const pill = (x, y, w, h) => ["rect", { x, y, width: w, height: h, rx: w / 2, fill: "currentColor" }];
+  const arc = (d) => ["path", { d, ...LINE }];
+  const HAPPY = [arc("M-27 5Q-17 -9-7 5"), arc("M7 5Q17 -9 27 5")];
+  const FACES = {
+    happy: HAPPY,
+    look: [pill(-25, -11, 13, 23), pill(12, -11, 13, 23)],
+    blink: [arc("M-26 2H-10"), arc("M10 2H26")],
+    curious: [pill(-26, -14, 15, 28), pill(12, -6, 13, 18), ["path", { d: "M-27 -22Q-18 -28-9 -22", ...BROW }]],
+    thinking: [pill(-22, -16, 12, 20), pill(14, -16, 12, 20)],
+    sleepy: [arc("M-27 -1Q-17 10-7 -1"), arc("M7 -1Q17 10 27 -1")],
+    alert: [pill(-26, -16, 14, 30), pill(12, -16, 14, 30), ["path", { d: "M-28 -24Q-19 -30-10 -24", ...BROW }], ["path", { d: "M10 -24Q19 -30 28 -24", ...BROW }]],
+    sorry: [pill(-24, -6, 11, 17), pill(13, -6, 11, 17), ["path", { d: "M-28 -12L-10 -19", ...BROW }], ["path", { d: "M28 -12L10 -19", ...BROW }]],
+    shy: [...HAPPY, ["ellipse", { cx: -36, cy: 15, rx: 7, ry: 4.5, fill: "#ff8fa3", opacity: ".55" }], ["ellipse", { cx: 36, cy: 15, rx: 7, ry: 4.5, fill: "#ff8fa3", opacity: ".55" }]],
   };
-  // Which face image shows for which mood; the original smiling face needs no overlay.
+  // Which face shows for which mood; a happy buddy simply smiles.
   const FACE_FOR = { curious: "curious", thinking: "thinking", sleepy: "sleepy", alert: "alert", sorry: "sorry", shy: "shy" };
   // Small tables that decide which expressions blink, which moods allow wandering about, and which speech bubbles must not be replaced.
   const BLINKS = new Set(["curious", "alert", "thinking", "sorry", "look"]);
   const FX = { curious: "?", alert: "!", thinking: "...", sleepy: "z z z", sorry: "", shy: "", happy: "", nod: "", celebrate: "" };
-  const CONFETTI = ["#ffb627", "#e8508a", "#2fbf9b", "#4a8fe7", "#8b5cf6", "#ffffff"];
+  const CONFETTI = ["#ffb627", "#e8508a", "#2fbf9b", "#4a8fe7", "#7c4dde", "#ffffff"];
   const CALM = new Set(["happy", "nod", "thinking", "curious"]);   // moods in which it is fine to wander off and play
   const STICKY = new Set(["alert", "sorry"]);                       // moods whose bubble must not be talked over
 
   const reduceMotion = () => !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const svgEl = (tag, attrs, ...kids) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v);
+    for (const kid of kids) if (kid) n.append(kid);
+    return n;
+  };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -46,11 +67,33 @@
     } catch (e) { return null; }
   }
 
+  // The buddy itself, on a 160 x 200 grid: a rounded head with a dark screen for a face, a small body, ears and a lit antenna.
+  // Dori (family) wears a little door on her chest, Ringo (adult) a ring. Colours come from css (--b-*), so the page decides them.
+  function drawBot(who) {
+    const eyes = svgEl("g", { class: "b-eyes" });
+    const chest = who === "adult"
+      ? svgEl("circle", { cx: 80, cy: 146, r: 9, fill: "none", "stroke-width": 4, "stroke-dasharray": "11.4 2.7", class: "b-ring" })
+      : svgEl("g", null, svgEl("path", { d: "M71 162v-16a9 9 0 0 1 18 0v16z", class: "b-trim" }), svgEl("circle", { cx: 84, cy: 154, r: 1.9, class: "b-glow" }));
+    const svg = svgEl("svg", { viewBox: "0 0 160 200", class: "buddy-base", "aria-hidden": "true", focusable: "false" },
+      svgEl("rect", { x: 35, y: 120, width: 14, height: 36, rx: 7, class: "b-accent b-arm", transform: "rotate(10 42 126)" }),
+      svgEl("rect", { x: 111, y: 120, width: 14, height: 36, rx: 7, class: "b-accent b-arm", transform: "rotate(-10 118 126)" }),
+      svgEl("rect", { x: 55, y: 166, width: 21, height: 13, rx: 6.5, class: "b-accent" }),
+      svgEl("rect", { x: 84, y: 166, width: 21, height: 13, rx: 6.5, class: "b-accent" }),
+      svgEl("rect", { x: 49, y: 114, width: 62, height: 58, rx: 25, class: "b-shell" }),
+      chest,
+      svgEl("rect", { x: 9, y: 60, width: 15, height: 32, rx: 7.5, class: "b-accent" }),
+      svgEl("rect", { x: 136, y: 60, width: 15, height: 32, rx: 7.5, class: "b-accent" }),
+      svgEl("path", { d: "M80 24V13", class: "b-stem" }),
+      svgEl("circle", { cx: 80, cy: 9, r: 6.5, class: "b-glow" }),
+      svgEl("rect", { x: 22, y: 24, width: 116, height: 100, rx: 42, class: "b-shell" }),
+      svgEl("rect", { x: 34, y: 39, width: 92, height: 70, rx: 29, class: "b-screen" }),
+      svgEl("g", { transform: "translate(80 74)" }, eyes));
+    return { svg, eyes };
+  }
+
   // Create the buddy inside `container` and return its controls: say(), setMood(), enter(), poke(), destroy()...
   function mount(container, opts = {}) {
     const who = opts.who === "adult" ? "adult" : "family";
-    const base = opts.base || "companion/";
-    const face = FACE[who];
     const height = opts.height || 220;
     const showBubble = opts.bubble !== false;
     const life = opts.life !== false && !reduceMotion();
@@ -65,16 +108,11 @@
     const walk = el("div", "buddy-walk");
     const body = el("div", "buddy-body");
     const turn = el("div", "buddy-turn");
-    const img = el("img", "buddy-base");
-    img.alt = ""; img.draggable = false; img.src = `${base}robot-${who}${height <= 260 ? "-sm" : ""}.png`;
-    img.style.height = height + "px";
-    const overlay = el("img", "buddy-face");
-    overlay.alt = ""; overlay.draggable = false; overlay.hidden = true;
-    overlay.style.left = face.band[0] + "%";
-    overlay.style.top = face.band[1] + "%";
-    overlay.style.width = face.band[2] - face.band[0] + "%";
+    const bot = drawBot(who);
+    bot.svg.style.height = height + "px";
+    bot.svg.style.width = (height * .8).toFixed(1) + "px";
     const fx = el("span", "buddy-fx"); fx.setAttribute("aria-hidden", "true");
-    turn.append(img, overlay);
+    turn.append(bot.svg);
     body.append(turn, fx);
     walk.append(body, el("div", "buddy-shadow"));
     wrap.append(walk);
@@ -104,13 +142,15 @@
       if ((mood === "happy" || mood === "nod") && (tracking || lookingAround)) return "look";   // eyes open while it watches you
       return FACE_FOR[mood] || null;
     }
-    // Show the right face picture for the current mood, and slide the eyes to where the pointer is.
+    // Draw the right face for the current mood, and slide the eyes to where the pointer is.
+    let drawn = null;
     function paint() {
-      const n = faceName();
-      if (!n) { overlay.hidden = true; delete overlay.dataset.n; return; }
-      if (overlay.dataset.n !== n) { overlay.src = `${base}face-${who}-${n}.png`; overlay.dataset.n = n; }
-      overlay.hidden = false;
-      overlay.style.transform = `translate(${(eye.x * 5).toFixed(1)}%, ${(eye.y * 12).toFixed(1)}%)`;   // the eyes move inside the glass
+      const n = faceName() || "happy";
+      if (drawn !== n) {
+        bot.eyes.replaceChildren(...FACES[n].map(([tag, attrs]) => svgEl(tag, attrs)));
+        drawn = n;
+      }
+      bot.eyes.style.transform = `translate(${(eye.x * 7).toFixed(1)}px, ${(eye.y * 6).toFixed(1)}px)`;   // the eyes move inside the glass
     }
     const wear = (name, ms) => { temp = name; paint(); namedLater("temp", () => { temp = null; paint(); }, ms); };
 
@@ -223,7 +263,7 @@
       ["wiggle", 3, () => act("wiggle", 800)],
       ["stretch", 2, () => act("stretch", 1500)],
       ["look", 4, lookAround],
-      ["hum", 2, () => { act("hum", 2400); particle("♪", who === "adult" ? "#0e7c7b" : "#8b5cf6", 3); }],
+      ["hum", 2, () => { act("hum", 2400); particle("♪", who === "adult" ? "#d7263d" : "#7c4dde", 3); }],
       ["yawn", 1, () => { act("yawn", 1500); wear("sleepy", 1400); if (Math.random() < .5) petLine("yawn"); }],
     ];
     // Pick one idle action at random (weighted) when the buddy is free and was not touched recently.
@@ -370,7 +410,7 @@
     return { el: wrap, setMood, say, enter, destroy, poke, setTalk, get mood() { return mood; }, get asleep() { return asleep; } };
   }
 
-  const api = { mount, FACE, FACE_FOR };
+  const api = { mount, FACES, FACE_FOR };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.PraiseBuddy = api;
 })(typeof self !== "undefined" ? self : this);

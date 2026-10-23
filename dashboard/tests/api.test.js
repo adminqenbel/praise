@@ -72,3 +72,151 @@ test("ordinary calls still fail at once on a dead network (only patient() waits)
   await assert.rejects(Api.post("/api/auth/login", {}), (e) => e.status === 0);
   assert.strictEqual(calls.length, 1);
 });
+
+// ---- the read cache ----------------------------------------------------------------------------------------------
+// A fake server that answers each path with the next body it was given, and counts the calls.
+function server(bodies) {
+  const calls = [];
+  globalThis.fetch = (url, opts) => {
+    calls.push({ url, opts });
+    const list = bodies[url.replace("https://api.praise.qenbel.site", "")] || bodies["*"] || [{}];
+    const n = calls.filter((c) => c.url === url).length - 1;
+    const body = list[Math.min(n, list.length - 1)];
+    if (body === "down") return Promise.reject(new TypeError("Failed to fetch"));
+    return Promise.resolve({ ok: true, status: 200, json: async () => body });
+  };
+  return calls;
+}
+let now = 0;
+Api._clock(() => now);
+const fresh = () => { Api.clear(); Api.setSpace("family"); now = 0; };
+
+test("a read carries no custom header, so the browser doesn't ask permission first; a write does carry its headers", async () => {
+  fresh();
+  const calls = server({ "*": [{ ok: 1 }] });
+  await Api.get("/api/children");
+  assert.deepStrictEqual(calls[0].opts.headers, {});
+  await Api.post("/api/children", { name: "Mia" });
+  assert.strictEqual(calls[1].opts.headers["Content-Type"], "application/json");
+});
+
+test("every call names the space the tab shows (but the sign-in routes don't)", async () => {
+  fresh();
+  const calls = server({ "*": [{}] });
+  await Api.get("/api/stats?days=7");
+  await Api.get("/api/children");
+  await Api.get("/api/auth/me");
+  await Api.post("/api/children", { name: "x" });
+  assert.deepStrictEqual(calls.map((c) => c.url.replace("https://api.praise.qenbel.site", "")),
+    ["/api/stats?days=7&space=family", "/api/children?space=family", "/api/auth/me", "/api/children?space=family"]);
+  Api.setSpace("adult");
+  await Api.get("/api/children", { fresh: true });
+  assert.ok(calls[4].url.endsWith("/api/children?space=adult"));
+  await Api.get("/api/children", { space: "family", fresh: true });
+  assert.ok(calls[5].url.endsWith("/api/children?space=family"));
+});
+
+test("a recent read comes from memory, and each caller gets its own copy", async () => {
+  fresh();
+  const calls = server({ "*": [{ list: [1, 2] }] });
+  const a = await Api.get("/api/children");
+  a.list.push(3);                                               // a page changing what it was given…
+  now = 10000;
+  const b = await Api.get("/api/children");
+  assert.deepStrictEqual(b, { list: [1, 2] });                  // …doesn't change what the next page gets
+  assert.strictEqual(calls.length, 1);
+});
+
+test("two pages asking for the same thing at once share one request", async () => {
+  fresh();
+  const calls = server({ "*": [{ n: 1 }] });
+  const [a, b] = await Promise.all([Api.get("/api/stats"), Api.get("/api/stats")]);
+  assert.deepStrictEqual([a, b], [{ n: 1 }, { n: 1 }]);
+  assert.strictEqual(calls.length, 1);
+});
+
+test("an older read is shown at once and checked again; the page is told only if the answer changed", async () => {
+  fresh();
+  const calls = server({ "/api/children?space=family": [{ v: 1 }, { v: 1 }, { v: 2 }] });
+  const heard = [];
+  const off = Api.onChange((p) => heard.push(p));
+  await Api.get("/api/children");
+  now = 60000;                                                  // past the fresh window, inside the stale one
+  assert.deepStrictEqual(await Api.get("/api/children"), { v: 1 });          // instant, from memory
+  await new Promise((r) => setTimeout(r, 5));
+  assert.strictEqual(calls.length, 2);                          // …and asked again in the background
+  assert.deepStrictEqual(heard, []);                            // same answer: nothing to redraw
+  now = 120000;
+  assert.deepStrictEqual(await Api.get("/api/children"), { v: 1 });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepStrictEqual(heard, ["/api/children"]);             // different answer: the page hears about it
+  assert.deepStrictEqual(await Api.get("/api/children"), { v: 2 });
+  off();
+});
+
+test("a read too old to trust waits for the network", async () => {
+  fresh();
+  const calls = server({ "*": [{ v: 1 }, { v: 2 }] });
+  await Api.get("/api/children");
+  now = 11 * 60 * 1000;
+  assert.deepStrictEqual(await Api.get("/api/children"), { v: 2 });
+  assert.strictEqual(calls.length, 2);
+});
+
+test("any change empties the cache, so what you just did is never hidden by an old copy", async () => {
+  fresh();
+  const calls = server({ "/api/children?space=family": [{ v: 1 }, { v: 2 }], "*": [{}] });
+  assert.deepStrictEqual(await Api.get("/api/children"), { v: 1 });
+  await Api.post("/api/children", { name: "Leo" });
+  assert.deepStrictEqual(await Api.get("/api/children"), { v: 2 });
+  assert.strictEqual(calls.filter((c) => c.url.includes("/api/children?space=family") && c.opts.method === "GET").length, 2);
+});
+
+test("the chat and the space switch don't empty it (neither changes what a page shows)", async () => {
+  fresh();
+  const calls = server({ "*": [{ v: 1 }] });
+  await Api.get("/api/children");
+  await Api.post("/api/auth/chat", { message: "hi" });
+  await Api.post("/api/auth/space", { space: "adult" });
+  await Api.get("/api/children");
+  assert.strictEqual(calls.filter((c) => c.opts.method === "GET").length, 1);
+});
+
+test("the two spaces keep separate copies, and the other one can be fetched ahead of time", async () => {
+  fresh();
+  const calls = server({ "/api/children?space=family": [{ who: "Mia" }], "/api/children?space=adult": [{ who: "Me" }] });
+  await Api.prefetch(["/api/children"], { space: "adult" });
+  await Api.get("/api/children");
+  assert.strictEqual(calls.length, 2);
+  Api.setSpace("adult");
+  assert.deepStrictEqual(await Api.get("/api/children"), { who: "Me" });    // from the prefetch: no third call
+  assert.strictEqual(calls.length, 2);
+  Api.setSpace("family");
+  assert.deepStrictEqual(await Api.get("/api/children"), { who: "Mia" });
+});
+
+test("a failed read is not cached, and a failed prefetch is silent", async () => {
+  fresh();
+  const calls = server({ "*": ["down", { ok: 1 }] });
+  await assert.rejects(Api.get("/api/children"), (e) => e.status === 0);
+  assert.deepStrictEqual(await Api.get("/api/children"), { ok: 1 });
+  fresh();
+  server({ "*": ["down"] });
+  await Api.prefetch(["/api/children", "/api/policies"]);       // doesn't throw
+});
+
+test("an answer that was asked for before a change is not stored after it", async () => {
+  fresh();
+  let release;
+  globalThis.fetch = (url, opts) => new Promise((resolve) => {
+    if (opts.method === "GET") release = () => resolve({ ok: true, status: 200, json: async () => ({ old: true }) });
+    else resolve({ ok: true, status: 200, json: async () => ({}) });
+  });
+  const slow = Api.get("/api/children");
+  await Api.post("/api/children", { name: "Leo" });             // happens while the read is on its way
+  release();
+  await slow;
+  const calls = server({ "*": [{ old: false }] });
+  assert.deepStrictEqual(await Api.get("/api/children"), { old: false });    // the stale answer wasn't kept
+  assert.strictEqual(calls.length, 1);
+});

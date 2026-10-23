@@ -10,8 +10,8 @@
   --n-soft: #f5f6fa;
   --n-violet: #6d49de;        /* Praise (family) */
   --n-violet-soft: #f0ecff;
-  --n-teal: #0e7c7b;          /* Praise Shield (adult) */
-  --n-teal-soft: #e2f1ef;
+  --n-teal: #d7263d;          /* Praise Shield (adult): red */
+  --n-teal-soft: #fdecee;
   --n-font: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -100,19 +100,21 @@ html[data-theme="neutral"] .auth-card { display: grid; gap: .2rem; }
 html[data-theme="neutral"] .auth .wordmark { margin-bottom: 1.6rem; }
 html[data-theme="neutral"] .auth h1 { font: 700 clamp(1.9rem, 4vw, 2.5rem)/1.1 var(--n-font); font-stretch: 88%; margin-bottom: .5rem; }
 html[data-theme="neutral"] .auth .lede-a { color: var(--n-text2); margin: 0 0 .4rem; }
-html[data-theme="neutral"] .auth form { background: #fff; border: 1px solid var(--n-line); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 14px; padding: 1.4rem; margin-top: 1rem; }
+html[data-theme="neutral"] .auth form { background: #fff; border: 1px solid var(--n-line); box-shadow: 0 1px 2px rgba(20, 27, 45, .04), 0 18px 40px -24px rgba(20, 27, 45, .25); -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 18px; padding: 1.5rem; margin-top: 1rem; }
 html[data-theme="neutral"] .auth label { font-weight: 650; }
 html[data-theme="neutral"] .auth input[type=email], html[data-theme="neutral"] .auth input[type=password] {
-  border: 1.5px solid #b9c0d0; border-radius: 8px; background: #fff; width: 100%; font: 500 1rem var(--n-font); padding: .6rem .8rem; }
+  border: 1.5px solid #c5cad8; border-radius: 10px; background: #fff; width: 100%; font: 500 1rem var(--n-font); padding: .65rem .85rem; min-height: 2.9rem; }
 html[data-theme="neutral"] .auth input:focus { border-color: var(--n-ink); }
-html[data-theme="neutral"] .auth button[type=submit] { background: var(--n-ink); border-color: var(--n-ink); border-radius: 8px; font-family: var(--n-font); padding: .65rem 1.3rem; }
+html[data-theme="neutral"] .auth button[type=submit] { background: var(--n-ink); border-color: var(--n-ink); border-radius: 10px; font-family: var(--n-font); padding: .7rem 1.3rem; width: 100%; font-size: 1rem; }
 html[data-theme="neutral"] .auth .switch input { accent-color: var(--n-ink); }
-html[data-theme="neutral"] .auth .switch-mode button { color: var(--n-ink); font-weight: 650; }
+html[data-theme="neutral"] .auth .switch-mode { margin-top: 1rem; font-size: .98rem; }
+html[data-theme="neutral"] .auth .switch-mode button { background: none; border: 0; padding: 0; color: var(--n-ink); font: 650 1em var(--n-font); text-decoration: underline; text-underline-offset: 3px; display: inline; }
+html[data-theme="neutral"] .auth .switch-mode button:hover { background: none; }
 html[data-theme="neutral"] .auth fieldset.kind label.switch { padding: .55rem .8rem; border: 1.5px solid var(--n-line); border-radius: 10px; margin: .4rem 0; }
 html[data-theme="neutral"] .auth fieldset.kind label.switch:has(input:checked) { border-color: var(--n-ink); background: var(--n-soft); }
 html[data-theme="neutral"] .auth .err { color: #b3261e; }
 html[data-theme="neutral"] .auth .or { text-align: center; color: var(--n-text2); margin: .9rem 0 .5rem; font-size: .95rem; }
-html[data-theme="neutral"] .auth button.google { width: 100%; background: #fff; color: var(--n-ink); border: 1.5px solid #b9c0d0; border-radius: 8px; font: 650 1rem var(--n-font); padding: .65rem 1.3rem; }
+html[data-theme="neutral"] .auth button.google { width: 100%; background: #fff; color: var(--n-ink); border: 1.5px solid #c5cad8; border-radius: 10px; font: 650 1rem var(--n-font); padding: .7rem 1.3rem; }
 html[data-theme="neutral"] .auth button.google:hover { border-color: var(--n-ink); }
 
 @media (max-width: 860px) {
