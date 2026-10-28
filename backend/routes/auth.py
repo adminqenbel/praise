@@ -46,7 +46,7 @@ def _new_account(email: str, password_hash: str | None, account_type: str) -> Us
 
 # Create an account. A family account starts empty; an adult account starts with one profile for the person themself.
 @bp.post("/auth/register")
-@rate_limit("register", 10, 3600)
+@rate_limit("register", 10, 3600, shared=True)
 def register():
     data = request.get_json(silent=True) or {}
     email = str(data.get("email", "")).strip().lower()
@@ -76,8 +76,8 @@ def _login_key():
 
 # Check the password. Unknown emails run a dummy hash so response time doesn't reveal whether an account exists.
 @bp.post("/auth/login")
-@rate_limit("login-ip", 60, 900)
-@rate_limit("login", 8, 900, key_fn=_login_key)
+@rate_limit("login-ip", 60, 900, shared=True)
+@rate_limit("login", 8, 900, key_fn=_login_key, shared=True)
 def login():
     data = request.get_json(silent=True) or {}
     email = str(data.get("email", "")).strip().lower()
@@ -114,7 +114,7 @@ def _dashboard(page: str | None, error: str | None = None):
 
 
 @bp.get("/auth/google/start")
-@rate_limit("google-start", 30, 600)
+@rate_limit("google-start", 30, 600, shared=True)
 def google_start():
     """Sign in or sign up with Google; with ?link=1, attach Google to the login that is signed in now."""
     page = request.args.get("next")
@@ -133,7 +133,7 @@ def google_start():
 
 
 @bp.get("/auth/google/callback")
-@rate_limit("google-callback", 30, 600)
+@rate_limit("google-callback", 30, 600, shared=True)
 def google_callback():
     attempt = session.pop("google", None)
     if not attempt or time.time() - attempt.get("at", 0) > GOOGLE_ATTEMPT_SECONDS or \
@@ -291,7 +291,7 @@ def disconnect_code(device_id):
 
 
 @bp.post("/devices/pair")
-@rate_limit("pair", 10, 600)
+@rate_limit("pair", 10, 600, shared=True)
 def pair_device():
     """Called by the extension. Unauthenticated by design: the one-time code is the secret."""
     code = str((request.get_json(silent=True) or {}).get("code", ""))

@@ -41,7 +41,7 @@ def _needs_ai(site_info, decision, cfg) -> bool:
 
 @bp.post("/disconnect")
 @device_required
-@rate_limit("disconnect", 5, 600, key_fn=lambda: f"dev{g.device.id}")
+@rate_limit("disconnect", 5, 600, key_fn=lambda: f"dev{g.device.id}", shared=True)
 def disconnect():
     """The browser asks to leave its account. An adult protecting themselves just confirms; on a family
     account the browser belongs to a child, so a parent has to agree (otherwise the child could simply switch the
@@ -131,7 +131,7 @@ def check():
                            cache_ttl=0, **decision.to_dict())
         # One family can't spend the shared AI budget: per-parent ceiling across all their devices.
         if current_app.config.get("RATELIMIT_ENABLED", True) and \
-                not limiter.allow(f"ai:user{child.parent_id}", AI_CALLS_PER_FAMILY, 600)[0]:
+                not limiter.allow(f"ai:user{child.parent_id}", AI_CALLS_PER_FAMILY, 600, shared=True)[0]:
             ai_state = "unavailable"
         else:
             try:

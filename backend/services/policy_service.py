@@ -1,4 +1,5 @@
 """Load a child's stored policy into the pure engine's PolicyConfig."""
+import os
 import time
 
 from flask import current_app, has_app_context
@@ -75,9 +76,17 @@ def _policy_rolled_back(session):
     session.info.pop("policy_changed", None)
 
 
+def _cache_ttl() -> float:
+    raw = current_app.config.get("POLICY_CACHE_TTL", os.environ.get("POLICY_CACHE_TTL"))
+    try:
+        return float(raw) if raw not in (None, "") else DEFAULT_CACHE_TTL
+    except ValueError:
+        return DEFAULT_CACHE_TTL
+
+
 def config_for_child(child: Child) -> PolicyConfig:
     cache = _cache()
-    ttl = float(current_app.config.get("POLICY_CACHE_TTL", DEFAULT_CACHE_TTL)) if cache is not None else 0
+    ttl = _cache_ttl() if cache is not None else 0
     if not ttl:
         return policy_to_config(child.policy)
     now = time.monotonic()

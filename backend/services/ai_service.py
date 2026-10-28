@@ -14,11 +14,34 @@ from services import site_service
 _classifier: Classifier | None = None
 
 
+class SharedDailyBudget:
+    """The AI daily call cap counted in the database, so several workers share one budget instead of each
+    spending the whole cap. Counts per UTC day. Falls back to a per-process count if the database is unreachable
+    (the cap then errs on the side of spending less than the shared total, never more per worker)."""
+
+    def __init__(self, limit: int):
+        self.limit = limit
+        self._local = DailyBudget(limit)
+
+    def take(self) -> bool:
+        from services import ratelimit
+        if not ratelimit.shared_enabled():
+            return self._local.take()
+        day = int(time.time() // 86400)
+        try:
+            return ratelimit.shared_take("ai-daily-budget", day, self.limit, (day + 2) * 86400)
+        except SQLAlchemyError:
+            db.session.rollback()
+            return self._local.take()
+
+
 def get_classifier(config) -> Classifier:
     global _classifier
     if _classifier is None:
+        limit = int(config.get("AI_DAILY_BUDGET", 500))
+        from services import ratelimit
         _classifier = Classifier(build_backend(config),
-                                 DailyBudget(int(config.get("AI_DAILY_BUDGET", 500))))
+                                 SharedDailyBudget(limit) if ratelimit.shared_enabled() else DailyBudget(limit))
     return _classifier
 
 
