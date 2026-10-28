@@ -7,6 +7,7 @@
   },
   "condition": {
    "requestDomains": [
+    "adgrx.com",
     "adsymptotic.com",
     "agkn.com",
     "bkrtx.com",
@@ -15,15 +16,22 @@
     "exelator.com",
     "eyeota.net",
     "fingerprint.com",
+    "fingerprintjs.com",
     "fpcdn.io",
     "fpjs.io",
+    "fpjscdn.net",
     "id5-sync.com",
-    "iovation.com",
+    "intentiq.com",
+    "liadm.com",
     "liveramp.com",
     "lotame.com",
-    "online-metrix.net",
+    "mxptint.net",
+    "netmng.com",
+    "pippio.com",
     "rlcdn.com",
-    "tapad.com"
+    "semasio.net",
+    "tapad.com",
+    "turn.com"
    ],
    "domainType": "thirdParty",
    "resourceTypes": [
