@@ -238,7 +238,7 @@ function createHttpServer(deps) {
 
   function tooLarge(res, req, cors) {
     send(res, 413, errorBody("payload_too_large"), Object.assign({ Connection: "close" }, cors));
-    res.on("finish", () => req.socket.destroy());
+    req.resume();      // discard the rest without buffering; Connection: close ends the socket, requestTimeout bounds a trickle
   }
 
   function finish(route, parsed, res, cors) {

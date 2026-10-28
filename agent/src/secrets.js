@@ -16,7 +16,8 @@ function hardenWindows(target, isDir) {
   try {
     const who = `${process.env.USERDOMAIN ? process.env.USERDOMAIN + "\\" : ""}${process.env.USERNAME || ""}`;
     if (!process.env.USERNAME) return;
-    execFileSync("icacls", [target, "/inheritance:r", "/grant:r", `${who}:${isDir ? "(OI)(CI)F" : "F"}`],
+    const icacls = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "icacls.exe");   // absolute: do not resolve through PATH
+    execFileSync(icacls, [target, "/inheritance:r", "/grant:r", `${who}:${isDir ? "(OI)(CI)F" : "F"}`],
       { stdio: "ignore", windowsHide: true, timeout: 5000 });
   } catch (e) { /* best effort */ }
 }
