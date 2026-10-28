@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUDDY = ["companion.js", "companion-ui.js", "chat-ui.js", "companion.css", "pet.js", "pet-control.js"]
 # (file in common/, folder it is copied into)
 TARGETS = {
-    "extension": [(f, ".") for f in ["lib.js", "protections.js", "sensitive.js", "passwords.js", "guard-control.js"] + BUDDY],
+    "extension": [(f, ".") for f in ["lib.js", "detect.js", "protections.js", "sensitive.js", "passwords.js", "guard-control.js"] + BUDDY],
     "dashboard": [("companion.js", "js"), ("companion-ui.js", "js"), ("chat-ui.js", "js"), ("companion.css", "css")],
 }
 
