@@ -1,0 +1,15 @@
+{
+  "name": "praise-local-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Praise local agent: loopback-only detection and policy service for the extension and local tools. No runtime dependencies.",
+  "license": "UNLICENSED",
+  "main": "src/server.js",
+  "bin": { "praise-agent": "src/cli.js" },
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "bench": "node bench/bench.js"
+  }
+}
