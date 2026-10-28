@@ -343,6 +343,33 @@ test("combine: an official verdict wins, so a page can never make a brand's own 
   assert.strictEqual(c.official, "paypal.com");
 });
 
+test("extractDomSignals reads a document into the signals scorePage takes, and never throws", () => {
+  const el = (attrs) => ({ getAttribute: (n) => (attrs[n] == null ? null : attrs[n]), hidden: !!attrs.hiddenFlag });
+  const inline = Array.from({ length: 80 }, (_, i) => String.fromCharCode(33 + ((i * 37) % 90)) + (i * 7919).toString(36)).join("");
+  const doc = {
+    URL: "https://login.example-shop.top/signin", title: "Sign in to PayPal",
+    querySelector: (sel) => (sel.includes("password") ? {} : sel.includes("description") ? { getAttribute: () => "Secure sign in" } : null),
+    body: { innerText: "Verify   your\n identity  within 24 hours" },
+    forms: [{ action: "https://collector.other-host.net/post" }, { action: "" }, { action: "https://collector.other-host.net/post" }],
+    scripts: [{ src: "https://cdn.other-host.net/a.js" }, { src: "/local.js" }, { src: "" , textContent: inline }, { src: "https://cdn.other-host.net/b.js" }],
+    getElementsByTagName: () => [el({ style: "display:none" }), el({ width: "0" }), el({ hiddenFlag: true }), el({ style: "border:0" })],
+  };
+  const s = D.extractDomSignals(doc, { href: doc.URL, hostname: "login.example-shop.top" });
+  assert.strictEqual(s.title, "Sign in to PayPal");
+  assert.strictEqual(s.text, "Verify your identity within 24 hours");
+  assert.strictEqual(s.has_password_field, true);
+  assert.strictEqual(s.form_count, 3);
+  assert.deepStrictEqual(s.form_actions, ["https://collector.other-host.net/post"]);
+  assert.deepStrictEqual(s.external_script_hosts, ["cdn.other-host.net"]);
+  assert.strictEqual(s.hidden_iframes, 3);
+  assert.ok(s.inline_script_entropy > 4);
+  assert.strictEqual(s.url, doc.URL);
+  const v = D.scorePage(s);
+  assert.ok(v.score >= 0.5 && v.brand === "paypal", JSON.stringify(v));
+  for (const bad of [null, undefined, {}, 5, { body: null, forms: 5 }]) assert.doesNotThrow(() => D.extractDomSignals(bad, null));
+  assert.strictEqual(D.extractDomSignals(null).has_password_field, false);
+});
+
 test("combine accepts verdicts that came from the server", () => {
   const c = D.combine([{ score: 0.4, reasons: ["server says"], brand: "x" }, D.scoreUrl("https://example.org/")]);
   assert.ok(c.score >= 0.4 - 0.001);

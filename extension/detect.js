@@ -987,7 +987,60 @@
     } catch (e) { return none(); }
   }
 
-  const api = { version: VERSION, scoreUrl, scorePage, combine, PRIOR, WEIGHTS: W,
+  // ---- DOM helper for content scripts ---------------------------------------------------------------------------
+  // Builds the `signals` object scorePage takes from a live document (all of it stays on the device). Bounded work:
+  // at most 40 forms, 200 scripts, 100 frames, 30 KB of inline script. Never throws.
+  function shannon(s) {
+    const n = s.length;
+    if (!n) return 0;
+    const counts = new Map();
+    for (let i = 0; i < n; i++) counts.set(s[i], (counts.get(s[i]) || 0) + 1);
+    let h = 0;
+    counts.forEach((c) => { const p = c / n; h -= p * Math.log2(p); });
+    return h;
+  }
+
+  function extractDomSignals(doc, loc) {
+    const out = { title: "", description: "", text: "", has_password_field: false, form_count: 0, form_actions: [],
+      external_script_hosts: [], hidden_iframes: 0, inline_script_entropy: 0, url: "" };
+    try {
+      const href = String((loc && loc.href) || (doc && doc.URL) || "");
+      out.url = href.slice(0, 2048);
+      const myHost = (loc && loc.hostname) || "";
+      out.title = String(doc.title || "").slice(0, 200);
+      const meta = doc.querySelector && doc.querySelector('meta[name="description"]');
+      out.description = String((meta && meta.getAttribute("content")) || "").slice(0, 400);
+      const body = doc.body;
+      out.text = String((body && (body.innerText || body.textContent)) || "").replace(/\s+/g, " ").trim().slice(0, 1500);
+      out.has_password_field = !!(doc.querySelector && doc.querySelector('input[type="password"]'));
+      const forms = doc.forms ? Array.prototype.slice.call(doc.forms, 0, 40) : [];
+      out.form_count = doc.forms ? Math.min(doc.forms.length, 100) : 0;
+      const actions = new Set();
+      for (const f of forms) { const a = String(f.action || ""); if (a) actions.add(a.slice(0, 1024)); }
+      out.form_actions = Array.from(actions);
+      const hosts = new Set();
+      let inline = "";
+      const scripts = doc.scripts ? Array.prototype.slice.call(doc.scripts, 0, 200) : [];
+      for (const s of scripts) {
+        if (s.src) {
+          try { const h = new URL(s.src, href).hostname; if (h && h !== myHost) hosts.add(h); } catch (e) { /* skip */ }
+        } else if (inline.length < 30000) inline += s.textContent || "";
+      }
+      out.external_script_hosts = Array.from(hosts);
+      out.inline_script_entropy = inline.length >= 200 ? round3(shannon(inline.slice(0, 30000))) : 0;
+      const frames = doc.getElementsByTagName ? Array.prototype.slice.call(doc.getElementsByTagName("iframe"), 0, 100) : [];
+      let hidden = 0;
+      for (const fr of frames) {
+        const st = String(fr.getAttribute ? fr.getAttribute("style") || "" : "").toLowerCase();
+        const w = fr.getAttribute ? fr.getAttribute("width") : null, h = fr.getAttribute ? fr.getAttribute("height") : null;
+        if (fr.hidden || /display\s*:\s*none|visibility\s*:\s*hidden|width\s*:\s*0|height\s*:\s*0/.test(st) || w === "0" || h === "0") hidden++;
+      }
+      out.hidden_iframes = hidden;
+    } catch (e) { /* return what was collected */ }
+    return out;
+  }
+
+  const api = { version: VERSION, scoreUrl, scorePage, combine, extractDomSignals, PRIOR, WEIGHTS: W,
     parseHost, skeleton, editDistance, dgaScore, punycodeDecode };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.PraiseDetect = api;
