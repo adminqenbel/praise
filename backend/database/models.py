@@ -272,6 +272,16 @@ class Event(db.Model):
     )
 
 
+# Fixed-window hit counters shared by every worker (rate limits and the AI daily budget). One row per key and window;
+# rows are deleted once their window is over. Holds no personal data: keys are SHA-256 digests.
+class RateCounter(db.Model):
+    __tablename__ = "rate_counters"
+    key = db.Column(db.String(190), primary_key=True)
+    bucket = db.Column(db.BigInteger, primary_key=True)   # window number: floor(unix time / window length)
+    hits = db.Column(db.Integer, nullable=False, default=0)
+    expires_at = db.Column(db.BigInteger, nullable=False, index=True)   # unix time after which the row is garbage
+
+
 # The model's full answer for one classification, kept for administrators. Global data: nothing about a person.
 class AIAnalysis(db.Model):
     __tablename__ = "ai_analyses"

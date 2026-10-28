@@ -13,13 +13,20 @@ LOOKALIKE_WARN = 0.75
 
 
 def domain_matches(domain: str, rules) -> str | None:
-    """Return the matching rule if domain equals it or is a subdomain of it."""
-    parts = domain.lower().strip(".").split(".")
-    for i in range(len(parts)):
-        candidate = ".".join(parts[i:])
+    """Return the matching rule if domain equals it or is a subdomain of it.
+
+    Walks the name from the left, dropping one label at a time (a.b.example.com, b.example.com, example.com,
+    com), so the cost is the number of labels, not the number of rules, and an empty rule set returns at once."""
+    if not rules:
+        return None
+    candidate = domain.lower().strip(".")
+    while True:
         if candidate in rules:
             return candidate
-    return None
+        dot = candidate.find(".")
+        if dot < 0:
+            return None
+        candidate = candidate[dot + 1:]
 
 
 # The action a policy sets for a category. Security categories (malware, phishing...) are blocked even when the policy says nothing.
