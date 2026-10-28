@@ -18,6 +18,7 @@ MAX_TEXT = 1500  # chars of page text sent to the model
 MAX_TITLE = 200
 MAX_EVIDENCE = 8
 MAX_EVIDENCE_LEN = 200
+MAX_LOCKS = 4096   # per-domain locks kept before idle ones are dropped
 
 # Instructions to the model. Page content is marked untrusted so text on a website cannot give it orders (prompt injection).
 SYSTEM_PROMPT = (
@@ -131,6 +132,11 @@ def parse_response(raw: str, domain: str, model: str = "unknown") -> Classificat
     return ClassificationResult(domain, risk, conf, cats, evidence, model)
 
 
+def compact_verdict(verdict: dict) -> dict:
+    """The part of a detection verdict worth sending to the model and storing: no numeric feature dump."""
+    return {k: verdict.get(k) for k in ("score", "level", "reasons", "brand", "official")}
+
+
 def merge_heuristics(result: ClassificationResult, heur: dict) -> ClassificationResult:
     """Deterministic pre-signal can raise (never lower) phishing score and risk."""
     result.heuristics = heur
@@ -174,6 +180,9 @@ class Classifier:
 
     def _lock_for(self, domain: str) -> threading.Lock:
         with self._locks_guard:
+            if len(self._locks) >= MAX_LOCKS:            # one lock per domain ever seen would grow forever
+                for k in [k for k, lk in self._locks.items() if not lk.locked()]:
+                    del self._locks[k]
             return self._locks.setdefault(domain, threading.Lock())
 
     def classify(self, domain: str, signals: dict | None = None,
@@ -186,7 +195,7 @@ class Classifier:
                 return None
             clean = sanitize_signals(signals)
             # Cheap deterministic look-alike check runs first, so it still works when the AI is down.
-            heur = phishing_signals(domain, clean)
+            heur = compact_verdict(phishing_signals(domain, clean))
             if not self.budget.take():
                 raise AIUnavailable("daily AI budget exhausted")
             try:

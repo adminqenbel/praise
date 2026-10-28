@@ -507,6 +507,22 @@ def _with_page(host: str, signals: dict) -> dict:
     return _finish(logit + sum(w for w, _ in extra), list(ev) + extra, brand, official, features)
 
 
+def clean_page_signals(signals) -> dict:
+    """Bound untrusted page signals to the types and sizes the scorer reads (a dict is always returned)."""
+    if not isinstance(signals, dict) or not signals:
+        return {}
+    out = {"has_password_field": bool(signals.get("has_password_field")),
+           "title": str(signals.get("title") or "")[:200], "text": str(signals.get("text") or "")[:1500]}
+    actions = signals.get("form_actions")
+    if isinstance(actions, list):
+        out["form_actions"] = [a[:300] for a in actions[:10] if isinstance(a, str)]
+    for key in ("hidden_iframes", "inline_script_entropy"):
+        v = signals.get(key)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v:
+            out[key] = max(0, min(v, 1000))
+    return out
+
+
 def combine(verdicts) -> dict:
     """Merge verdicts for the same visit (e.g. URL + page). The strongest one leads; reasons are
     merged in order of the verdict that gave them (at most 6, no repeats)."""

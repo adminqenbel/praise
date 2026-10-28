@@ -1,4 +1,7 @@
 """Glue: classify an unknown domain, persist the summary (sites) and the full analysis (ai_analyses)."""
+import threading
+import time
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from ai.classifier import AIUnavailable, Classifier, DailyBudget, InvalidAIResponse
@@ -22,6 +25,37 @@ def get_classifier(config) -> Classifier:
 def set_classifier(c: Classifier | None) -> None:  # tests / hot swap after key is set
     global _classifier
     _classifier = c
+    with _failed_lock:
+        _failed.clear()
+
+
+# Negative cache: a domain whose classification just failed (provider down, bad answer, budget spent) is not
+# sent to the provider again for a minute. Without it every page load of that site, from every device, waits
+# out another failing call and spends budget; the policy's unknown-site default applies meanwhile.
+FAILURE_TTL = 60.0
+_MAX_FAILED = 2048
+_failed: dict[str, float] = {}
+_failed_lock = threading.Lock()
+
+
+def _recently_failed(domain: str) -> bool:
+    with _failed_lock:
+        until = _failed.get(domain)
+        if until is None:
+            return False
+        if until <= time.monotonic():
+            del _failed[domain]
+            return False
+        return True
+
+
+def _remember_failure(domain: str) -> None:
+    now = time.monotonic()
+    with _failed_lock:
+        if len(_failed) >= _MAX_FAILED:                      # bound memory: drop expired, then the oldest
+            for k in [k for k, v in _failed.items() if v <= now] or [min(_failed, key=_failed.get)]:
+                del _failed[k]
+        _failed[domain] = now + FAILURE_TTL
 
 
 def classify_and_store(domain: str, signals: dict | None, config,
@@ -31,6 +65,8 @@ def classify_and_store(domain: str, signals: dict | None, config,
     Returns the Site row. On AIUnavailable / InvalidAIResponse the site stays UNKNOWN and the
     caller applies the policy's unknown-site default.
     """
+    if _recently_failed(domain):
+        raise AIUnavailable("classification failed recently")
     site = site_service.get_or_create_site(domain)
 
     # Used by the classifier: if another request finished this domain while we waited, skip the AI call.
@@ -39,7 +75,11 @@ def classify_and_store(domain: str, signals: dict | None, config,
         return ((site.source == "ai" and not site.needs_reanalysis)
                 or site.status == "ADMIN_VERIFIED")
 
-    result = get_classifier(config).classify(domain, signals, already_classified=_done)
+    try:
+        result = get_classifier(config).classify(domain, signals, already_classified=_done)
+    except (AIUnavailable, InvalidAIResponse):
+        _remember_failure(domain)
+        raise
     if result is None:
         return site  # another request classified it first
 
@@ -63,9 +103,9 @@ def threat_context(domain: str, signals: dict | None = None) -> dict:
     a phone number or instructions, and that text would then appear inside a trusted warning. The
     evidence stays in ai_analyses for administrators; it is never sent to the person's browser.
     """
-    from ai.heuristics import phishing_signals
-    heur = phishing_signals(domain, signals)
-    return {"evidence": heur["reasons"][:4], "suggest": heur.get("official")}
+    from detection import clean_page_signals, score_domain
+    verdict = score_domain(domain, clean_page_signals(signals) or None)
+    return {"evidence": verdict["reasons"][:4], "suggest": verdict.get("official")}
 
 
 # Keep the full AI answer for administrators. Best effort: the decision itself is already committed on the site row.

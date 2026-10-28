@@ -5,6 +5,6 @@ Interface fixed by docs/DETECTION-CONTRACT.md:
     combine(verdicts)                  -> Verdict dict
 Detection only supplies evidence; the policy engine decides.
 """
-from .score import VERSION, combine, level_of, score_domain
+from .score import VERSION, clean_page_signals, combine, level_of, score_domain
 
-__all__ = ["VERSION", "combine", "level_of", "score_domain"]
+__all__ = ["VERSION", "clean_page_signals", "combine", "level_of", "score_domain"]

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from flask import g, jsonify, request, session
+from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.models import Device, User
@@ -13,6 +14,7 @@ from database.postgres import db
 
 # A pairing code works once and only for 15 minutes. The alphabet leaves out look-alike characters (0/O, 1/I).
 PAIRING_TTL = timedelta(minutes=15)
+LAST_SEEN_EVERY = timedelta(minutes=1)   # how often a device request refreshes `last_seen`
 _CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
@@ -148,12 +150,20 @@ def device_required(fn):
         header = request.headers.get("Authorization", "")
         if not header.startswith("Bearer "):
             return err("device token required", 401)
-        device = Device.query.filter_by(token_hash=sha256(header[7:].strip()),
-                                        revoked=False).first()
+        # One query for the device and its child (the check endpoint always needs both).
+        device = (Device.query.options(joinedload(Device.child))
+                  .filter_by(token_hash=sha256(header[7:].strip()), revoked=False).first())
         if device is None:
             return err("invalid device token", 401)
-        device.last_seen = datetime.now(timezone.utc)
-        db.session.commit()
+        # last_seen is for the dashboard's "active" badge, so once a minute is plenty. Writing it on every
+        # request cost an UPDATE, a commit and a re-read of everything the commit expired.
+        now = datetime.now(timezone.utc)
+        seen = device.last_seen
+        if seen is not None and seen.tzinfo is None:   # SQLite hands back naive datetimes
+            seen = seen.replace(tzinfo=timezone.utc)
+        if seen is None or now - seen >= LAST_SEEN_EVERY:
+            device.last_seen = now
+            db.session.commit()
         g.device = device
         return fn(*a, **kw)
     return wrapper

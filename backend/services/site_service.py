@@ -1,11 +1,14 @@
 """Site intelligence: URL normalization, lookup, and lifecycle transitions."""
 from datetime import datetime, timezone
+from functools import lru_cache
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
+from sqlalchemy.orm import joinedload
+
 from database.models import Site, SiteCategory
 from database.postgres import db
-from ai.heuristics import phishing_signals
+from detection import score_domain
 from policy.decision import SiteInfo
 
 # Legal lifecycle transitions. ADMIN_VERIFIED can only be left via explicit
@@ -32,7 +35,7 @@ def normalize_domain(url_or_host: str) -> str | None:
     IP literals and single-label hosts are rejected (not classifiable as sites).
     """
     # Accept a bare host or a full URL; anything that cannot be a normal website name is rejected.
-    raw = (url_or_host or "").strip()
+    raw = (url_or_host or "").strip() if isinstance(url_or_host, str) else ""
     if not raw or len(raw) > 2048:
         return None
     if "://" not in raw:
@@ -41,8 +44,12 @@ def normalize_domain(url_or_host: str) -> str | None:
         host = urlsplit(raw).hostname
     except ValueError:
         return None
-    if not host:
-        return None
+    # Only the host is cached, never the URL: paths and queries are browsing history.
+    return _normalize_host(host) if host else None
+
+
+@lru_cache(maxsize=8192)
+def _normalize_host(host: str) -> str | None:
     host = host.strip(".").lower()
     try:
         # Raw IP addresses are not websites we can classify.
@@ -70,13 +77,19 @@ def get_site(domain: str) -> Site | None:
 def find_site(domain: str) -> Site | None:
     """Exact match first; otherwise the nearest *seeded* ancestor (accounts.google.com ->
     google.com). Only seed rows cover subdomains: a normal row for blogspot.com must not
-    vouch for every blog hosted on it."""
-    site = get_site(domain)
-    if site is not None:
-        return site
+    vouch for every blog hosted on it.
+
+    One query for the domain and all its ancestors, with the category and reputation rows the decision
+    needs loaded in the same statement (it used to be one query per ancestor, then two lazy loads)."""
     parts = domain.split(".")
-    for i in range(1, len(parts) - 1):          # never match a bare TLD
-        ancestor = get_site(".".join(parts[i:]))
+    candidates = [domain] + [".".join(parts[i:]) for i in range(1, len(parts) - 1)]   # never a bare TLD
+    rows = {s.domain: s for s in (
+        Site.query.options(joinedload(Site.reputation), joinedload(Site.categories))
+        .filter(Site.domain.in_(candidates)).all())}
+    if domain in rows:
+        return rows[domain]
+    for cand in candidates[1:]:                  # nearest ancestor first
+        ancestor = rows.get(cand)
         if ancestor is not None and ancestor.source == "seed":
             return ancestor
     return None
@@ -135,7 +148,7 @@ AI_SHARE_RISK = 50
 
 def to_site_info(domain: str, site: Site | None, viewer_id: int | None = None) -> SiteInfo:
     """`viewer_id` is the parent whose child is asking; None skips the trust rule (admin views)."""
-    lookalike = phishing_signals(domain)["score"]
+    lookalike = score_domain(domain)["score"]
     if site is None:
         return SiteInfo(domain=domain, lookalike=lookalike)
     flag = site.reputation[0].flag if site.reputation else None

@@ -3,6 +3,7 @@ import logging
 
 from flask import Blueprint, current_app, g, jsonify, request
 
+import detection
 from ai.classifier import AIUnavailable, InvalidAIResponse
 from ai.companion_llm import get_companion
 from database.postgres import db
@@ -113,6 +114,12 @@ def check():
 
     site = site_service.find_site(domain)
     info = site_service.to_site_info(domain, site, child.parent_id)
+    # Once the extension has sent what the page shows, score the page too (a login form, a brand in the title
+    # on an unrelated domain). Evidence only: it raises the look-alike score the engine's step 3b reads, and
+    # parent rules and verified sites still outrank it.
+    page = detection.clean_page_signals(body.get("signals"))
+    if page:
+        info.lookalike = max(info.lookalike, detection.score_domain(domain, page)["score"])
     decision = decide(info, cfg)
 
     ai_state = "not_needed"
@@ -131,6 +138,8 @@ def check():
                 site = ai_service.classify_and_store(domain, body.get("signals"), current_app.config,
                                                      classified_by=child.parent_id)
                 info = site_service.to_site_info(domain, site, child.parent_id)
+                if page:
+                    info.lookalike = max(info.lookalike, detection.score_domain(domain, page)["score"])
                 decision = decide(info, cfg)
                 ai_state = "classified"
             except (AIUnavailable, InvalidAIResponse):
@@ -143,7 +152,7 @@ def check():
     # For warnings and blocks that came from our own checks, add plain-language reasons and the real site to suggest.
     context = {}
     if decision.action in (Action.WARN, Action.BLOCK) and decision.level != Level.PARENT_RULE:
-        context = ai_service.threat_context(domain)
+        context = ai_service.threat_context(domain, body.get("signals"))
     return jsonify(domain=domain, ai=ai_state, cache_ttl=CACHE_TTL_SECONDS[decision.action],
                    **decision.to_dict(), **context)
 
