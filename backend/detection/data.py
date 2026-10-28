@@ -35,7 +35,7 @@ _BRANDS = {
     "icicibank": (("icicibank.com", "icici.com", "icicidirect.com", "iciciprulife.com",
                    "icicilombard.com", "icicibank.co.in"), ("icici",)),
     "sbi": (("sbi.co.in", "onlinesbi.sbi", "onlinesbi.com", "sbicard.com", "sbilife.co.in",
-             "sbimf.com", "bank.sbi", "sbi.bank.in"), ("onlinesbi", "statebankofindia")),
+             "sbimf.com", "bank.sbi", "sbi.bank.in"), ("onlinesbi", "statebankofindia", "yono")),
     "axisbank": (("axisbank.com", "axis.bank.in", "axismf.com", "axisdirect.in"), ("axis",)),
     "kotak": (("kotak.com", "kotak.bank.in", "kotaksecurities.com", "kotakmf.com"),
               ("kotakbank", "kotakmahindra")),
@@ -167,6 +167,9 @@ TERMS = frozenset((
     "authenticate", "validate", "access", "id", "password", "reset", "mobile", "app", "customercare",
     "helpdesk", "team", "center", "centre", "limited", "restore", "activate", "activation", "form",
     "check", "status", "tracking", "track", "delivery", "notice", "urgent", "document",
+    "lock", "locked", "gift", "giftcard", "free", "win", "winner", "prize", "verified", "blocked",
+    "limit", "disabled", "review", "appeal", "contact", "claims", "fraud", "dispute", "complaint",
+    "resolution", "notification", "inbox", "mail", "message", "sync", "renewal", "renew", "subscription",
 ))
 # Words that are decisive for scoring (they mean "this page wants your credentials or money").
 STRONG_TERMS = frozenset((

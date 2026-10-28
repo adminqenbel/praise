@@ -5,7 +5,6 @@ deletions of the *query* and probes a dict, instead of comparing against every b
 query length, not on how many brands there are. Candidates are then verified with the real distance.
 """
 from functools import lru_cache
-from itertools import combinations
 
 from .data import BENIGN_NEAR, BRAND_TOKENS, KEYBOARD_NEIGHBOURS
 
@@ -37,12 +36,12 @@ def osa_distance(a: str, b: str, limit: int = MAX_DISTANCE) -> int:
 
 
 def _deletes(word: str, depth: int) -> set:
+    """`word` and every string reachable by deleting up to `depth` characters."""
     out = {word}
-    for d in range(1, depth + 1):
-        if d > len(word):
-            break
-        for idx in combinations(range(len(word)), d):
-            out.add("".join(c for i, c in enumerate(word) if i not in idx))
+    frontier = {word}
+    for _ in range(depth):
+        frontier = {w[:i] + w[i + 1:] for w in frontier for i in range(len(w))}
+        out |= frontier
     return out
 
 

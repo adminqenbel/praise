@@ -35,7 +35,7 @@ W = {
     "exact_weak": 1.4,        # same, but the brand is a short or ordinary word (apple, axis, bob)
     "sub_brand": 3.6,         # brand as a subdomain label of an unrelated site (paypal.evil.xyz)
     "typo_swap": 5.0, "typo_repeat": 5.0, "typo_adjacent": 4.8, "typo_omit": 4.6, "typo_insert": 4.5,
-    "typo_substitute": 4.3, "typo_two": 3.8,
+    "typo_substitute": 4.3, "typo_two": 4.2,
     "mixed_script": 2.6,      # Latin letters mixed with Cyrillic/Greek/...: almost only used to deceive
     "idn": 0.5,                # any internationalised name; ordinary on its own
     "term": 0.6,              # per distinct login/payment word (up to 3)
@@ -45,7 +45,7 @@ W = {
     "deep": 0.6,              # four or more subdomain labels
     "long": 0.5,              # very long registrable label
     "free_host": 0.8,         # brand imitation hosted on a free site builder
-    "dga": 5.0,               # at randomness 1.0 (ramps in from 0.2)
+    "dga": 5.5,               # at randomness >= 0.7 (ramps in from 0.25; natural names stay below 0.15)
     "gov_edu": -1.0,          # government and university registries
     # page signals (only ever add)
     "pw_suspect": 1.4, "pw_plain": 0.3, "title_brand": 2.0, "urgent": 0.7, "form_offsite": 1.2,
@@ -92,7 +92,11 @@ class _Space:
             self.brands.setdefault(fold(tok), (brand, tok))
         self.by_len = sorted(self.brands, key=len, reverse=True)
         self.terms = frozenset(fold(t) for t in TERMS | FILLER)
-        self.terms_by_len = sorted(self.terms, key=len, reverse=True)
+        self.term_lengths = sorted({len(t) for t in self.terms}, reverse=True)
+        # brand tokens indexed by their first three letters, so a scan only tests plausible starts
+        self.by_prefix = {}
+        for b in self.by_len:
+            self.by_prefix.setdefault(b[:3], []).append(b)
         self.ambiguous = frozenset(fold(t) for t in AMBIGUOUS_BRANDS)
         self.strong = frozenset(fold(t) for t in STRONG_TERMS)
         self.unfold = {fold(t): t for t in sorted(TERMS | FILLER, reverse=True)}
@@ -108,9 +112,9 @@ class _Space:
                 continue
             if s[i].isdigit():
                 ok[i + 1] = True
-            for t in self.terms_by_len:
-                if s.startswith(t, i):
-                    ok[i + len(t)] = True
+            for k in self.term_lengths:
+                if i + k <= n and s[i:i + k] in self.terms:
+                    ok[i + k] = True
         return ok[n]
 
     def covered(self, s: str) -> bool:
@@ -121,11 +125,12 @@ class _Space:
         found = []
         i, n = 0, len(s)
         while i < n:
-            for t in self.terms_by_len:
-                if s.startswith(t, i):
+            for k in self.term_lengths:
+                t = s[i:i + k]
+                if len(t) == k and t in self.terms:
                     if t in self.strong and self.unfold[t] not in found:
                         found.append(self.unfold[t])
-                    i += len(t)
+                    i += k
                     break
             else:
                 i += 1
@@ -140,13 +145,14 @@ class _Space:
         hit = self.brands.get(text)
         if hit:
             return ("exact", hit[0], [])
-        for b in self.by_len:
-            lb = len(b)
-            if lb > n:
-                continue
-            i = text.find(b)
-            if i < 0:
-                continue
+        # Longest brand token first, wherever it starts in the text.
+        cands = []
+        for i in range(n - 2):
+            for b in self.by_prefix.get(text[i:i + 3], ()):
+                if text.startswith(b, i):
+                    cands.append((len(b), i, b))
+        cands.sort(key=lambda c: (-c[0], c[1]))
+        for lb, i, b in cands:
             left, right = text[:i], text[i + lb:]
             brand, orig = self.brands[b]
             if self.covered(left) and self.covered(right):
@@ -186,8 +192,13 @@ def _label_hit(text: str, skel_text: str, has_foreign: bool):
             else:
                 consider("embedded", brand, "embedded", [])
     # Brand + words that are not login/pay words, split by hyphens: brand next to other words.
-    if best and best[2] == "embedded" and len(pieces) > 1:
-        best = ("brand_words", best[1], "words", [])
+    if best and best[2] in ("embedded", "exact") and len(pieces) > 1:
+        # ...unless one of the other words is a login/payment word, which makes it the usual combosquat.
+        others = [t for p in pieces for t in _RAW.terms_in(alnum(p)) if alnum(p) not in BRAND_TOKENS]
+        if others:
+            best = ("combo", best[1], "combo", others)
+        elif best[2] == "embedded":
+            best = ("brand_words", best[1], "words", [])
 
     # Look-alike reading (skeleton space): the text is compared with brands by how it looks. Skipped for any
     # piece that already spells the brand correctly.
@@ -307,7 +318,9 @@ def _analyse(domain: str):
         terms_seen = list(terms)
         ev.append((W[key], _brand_reason(key, kind, brand, terms)))
         if free_host:
-            ev.append((W["free_host"], "brand imitation on a free hosting site"))
+            # the brand's own name as the site name on a free host is the usual phishing kit layout
+            ev.append((W["free_host"] + (1.6 if key == "exact" else 0.0),
+                       "brand imitation on a free hosting site"))
 
     if mixed:
         ev.append((W["mixed_script"], "mixes Latin letters with another alphabet"))
@@ -351,8 +364,8 @@ def _analyse(domain: str):
         ev.append((W["long"], "very long domain name"))
 
     r, dfeat = dga.randomness(plain if ulabel.isascii() else "")
-    if r >= 0.2 and not chosen:
-        ev.append((W["dga"] * (r - 0.2) / 0.8, "name looks randomly generated"))
+    if r > 0.25 and not chosen:
+        ev.append((W["dga"] * min(1.0, (r - 0.25) / 0.45), "name looks randomly generated"))
 
     logit = PRIOR + sum(w for w, _ in ev)
     features = {"logit": round(logit, 3), "label_len": float(len(label)), "subdomains": float(len(subs)),
@@ -437,37 +450,61 @@ def _page_evidence(domain_ev, brand, host_reg: str, signals: dict):
     return out, new_brand
 
 
+def _finish(logit, reasons_ev, brand, official, features) -> dict:
+    # No evidence at all is exactly 0 (not the prior), so ordinary sites read as "nothing found".
+    score = round(_sigmoid(logit), 3) if any(w > 0 for w, _ in reasons_ev) else 0.0
+    positive = sorted((e for e in reasons_ev if e[0] > 0 and e[1]), key=lambda e: -e[0])
+    features = dict(features, logit=round(logit, 3))
+    return {"score": score, "level": level_of(score), "reasons": [r for _, r in positive[:6]], "brand": brand,
+            "official": official if score >= 0.25 else None, "features": features}
+
+
+@lru_cache(maxsize=32768)
+def _base_verdict(host: str):
+    """The signal-free verdict as an immutable tuple (cached; score_domain hands out fresh copies)."""
+    res = _analyse(host)
+    if res is None:
+        return None
+    if res[0] == "official":
+        return ("official", res[1])
+    _, logit, ev, brand, official, features, _words = res
+    v = _finish(logit, ev, brand, official, features)
+    return ("scored", v["score"], v["level"], tuple(v["reasons"]), v["brand"], v["official"], tuple(v["features"].items()))
+
+
 def score_domain(domain: str, signals: dict | None = None) -> dict:
     """Verdict for a host (and optionally what the page showed). Never raises."""
     try:
-        res = _analyse(domain.strip().lower()) if isinstance(domain, str) else None
-        if res is None:
+        if not isinstance(domain, str):
             return _none()
-        if res[0] == "official":
-            return _none("official brand domain", brand=res[1], features={"official": 1.0})
-        _, logit, ev, brand, official, features, words = res
-        reasons_ev = list(ev)
-        if isinstance(signals, dict) and signals:
-            host = domain.strip().lower()
-            if host.startswith("www."):
-                host = host[4:]
-            extra, new_brand = _page_evidence(ev, brand, host, signals)
-            reasons_ev += extra
-            logit += sum(w for w, _ in extra)
-            if not brand and new_brand:
-                brand, official = new_brand, SUGGEST.get(new_brand)
-            features = dict(features, page_evidence=round(sum(w for w, _ in extra), 3))
-        else:
-            features = dict(features)
-        # No evidence at all is exactly 0 (not the prior), so ordinary sites read as "nothing found".
-        score = round(_sigmoid(logit), 3) if any(w > 0 for w, _ in reasons_ev) else 0.0
-        positive = sorted((e for e in reasons_ev if e[0] > 0 and e[1]), key=lambda e: -e[0])
-        reasons = [r for _, r in positive[:6]]
-        features["logit"] = round(logit, 3)
-        return {"score": score, "level": level_of(score), "reasons": reasons, "brand": brand,
-                "official": official if score >= 0.25 else None, "features": features}
+        host = domain.strip().lower()
+        if signals and isinstance(signals, dict):
+            return _with_page(host, signals)
+        base = _base_verdict(host)
+        if base is None:
+            return _none()
+        if base[0] == "official":
+            return _none("official brand domain", brand=base[1], features={"official": 1.0})
+        return {"score": base[1], "level": base[2], "reasons": list(base[3]), "brand": base[4],
+                "official": base[5], "features": dict(base[6])}
     except Exception:   # a scorer bug must never break browsing
         return _none()
+
+
+def _with_page(host: str, signals: dict) -> dict:
+    res = _analyse(host)
+    if res is None:
+        return _none()
+    if res[0] == "official":
+        return _none("official brand domain", brand=res[1], features={"official": 1.0})
+    _, logit, ev, brand, official, features, _words = res
+    if host.startswith("www."):
+        host = host[4:]
+    extra, new_brand = _page_evidence(ev, brand, host, signals)
+    if not brand and new_brand:
+        brand, official = new_brand, SUGGEST.get(new_brand)
+    features = dict(features, page_evidence=round(sum(w for w, _ in extra), 3))
+    return _finish(logit + sum(w for w, _ in extra), list(ev) + extra, brand, official, features)
 
 
 def combine(verdicts) -> dict:
