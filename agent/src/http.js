@@ -92,8 +92,9 @@ function parseEventsBody(b, max) {
 }
 
 // ---- server ----------------------------------------------------------------------------------------
+const JSON_CT = "application/json; charset=utf-8";
 const JSON_HEADERS = {
-  "Content-Type": "application/json; charset=utf-8",
+  "Content-Type": JSON_CT,
   "Cache-Control": "no-store",
   "X-Content-Type-Options": "nosniff",
 };
@@ -124,8 +125,12 @@ function createHttpServer(deps) {
 
   function send(res, status, body, extra) {
     if (res.headersSent || res.writableEnded) return;
-    const headers = Object.assign({ "Content-Length": Buffer.byteLength(body) }, JSON_HEADERS, extra);
-    res.writeHead(status, headers);
+    const len = Buffer.byteLength(body);
+    if (extra === undefined) {      // hot path: flat header array, no per-request object building
+      res.writeHead(status, ["Content-Type", JSON_CT, "Cache-Control", "no-store", "X-Content-Type-Options", "nosniff", "Content-Length", len]);
+    } else {
+      res.writeHead(status, Object.assign({ "Content-Length": len }, JSON_HEADERS, extra));
+    }
     res.end(body);
   }
   const fail = (res, status, code, extra) => send(res, status, errorBody(code), extra);
